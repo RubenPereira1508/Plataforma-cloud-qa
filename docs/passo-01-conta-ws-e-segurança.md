@@ -216,12 +216,19 @@ Tenta responder sem consultar os apontamentos:
 | AWS CLI configurada e validada | ✅ | 2026-11-05 | `aws sts get-caller-identity` devolve `admin-estudo` |
 | EKS disponível no plano gratuito? | ☐ | | |
 
-## 5. Para a entrevista
+## 5. Para a entrevista: 
 
-Perguntas que costumam aparecer e que este passo ajuda a responder:
+**Como proteges uma conta AWS nova?**
+Ativo MFA, não uso a conta principal no dia a dia, crio utilizadores com permissões mínimas, protejo as chaves de acesso e configuro alertas de custo.
 
-- Como proteges uma conta AWS nova?
-- O que é o modelo de responsabilidade partilhada?
-- Porque é que se usa menor privilégio?
-- Como controlas custos na cloud?
-- Como evitas expor segredos num repositório Git?
+**O que é o modelo de responsabilidade partilhada?**
+A AWS protege a infraestrutura (a cloud em si: hardware, centros de dados, rede física). Eu sou responsável pelo que faço nela: configurações, acessos e dados.
+
+**Porque é que se usa menor privilégio?**
+Para dar a cada pessoa ou programa só as permissões necessárias à sua tarefa. Se uma chave for comprometida ou alguém se enganar, o impacto fica limitado.
+
+**Como controlas custos na cloud?**
+Defino orçamentos com alertas, acompanho os gastos, uso recursos do tamanho certo e destruo o que não é preciso. Em projetos de estudo, uso o plano gratuito.
+
+**Como evitas expor segredos num repositório Git?**
+Uso `.gitignore`, guardo segredos em gestores próprios (Secrets Manager, Secrets do GitHub), uso scanners de segredos antes do commit e, se algum vazar, revogo-o de imediato. Apagar o commit não chega, porque o segredo fica no histórico.
