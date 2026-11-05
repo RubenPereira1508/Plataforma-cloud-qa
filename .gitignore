@@ -1,0 +1,102 @@
+# =============================================================================
+# .gitignore
+# -----------------------------------------------------------------------------
+# O que faz: diz ao Git que ficheiros/pastas NÃO deve acompanhar nem enviar
+#            para o GitHub.
+# Porque existe: evita que segredos (chaves, palavras-passe) e ficheiros
+#            gerados automaticamente (que não são código-fonte) acabem num
+#            repositório que, mais tarde, será público.
+# Regra de ouro: se um ficheiro contém um segredo, o sítio dele NÃO é o Git.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# 1. SEGREDOS E CREDENCIAIS  (a parte mais importante deste ficheiro)
+# -----------------------------------------------------------------------------
+# Ficheiros de variáveis de ambiente. Costumam conter chaves de API e
+# palavras-passe. O asterisco (*) significa "qualquer coisa": .env.local,
+# .env.producao, etc.
+.env
+.env.*
+
+# Chaves privadas e certificados.
+*.pem
+*.key
+
+# Ficheiro "credentials" da AWS CLI e variações. Contém a chave de acesso
+# e a chave secreta. Se isto for para o GitHub, alguém pode usar a tua conta
+# (e gastar os teus créditos) em poucos minutos: existem robôs que procuram
+# chaves AWS em repositórios públicos.
+credentials
+*.credentials
+
+# Pasta de configuração da AWS CLI (a barra no fim indica que é uma pasta).
+.aws/
+
+
+# -----------------------------------------------------------------------------
+# 2. TERRAFORM  (infraestrutura como código; usado a partir do Passo 3)
+# -----------------------------------------------------------------------------
+# Pasta onde o Terraform descarrega os "providers" (plugins). É grande e
+# recria-se com `terraform init`, por isso não se guarda no Git.
+.terraform/
+
+# Ficheiros de estado. Descrevem os recursos que existem na AWS e podem conter
+# valores sensíveis em texto simples. Mais tarde guardamos o estado num
+# bucket S3 remoto, em vez de o ter no repositório.
+*.tfstate
+*.tfstate.*
+
+# Ficheiros de valores de variáveis. Costumam ter dados específicos de quem
+# executa (e por vezes segredos). Usa-se um ficheiro de exemplo
+# (terraform.tfvars.example) para documentar quais são as variáveis.
+*.tfvars
+
+# Planos guardados com `terraform plan -out`. Podem conter dados sensíveis.
+*.tfplan
+
+# Registo de falhas do Terraform.
+crash.log
+
+# NOTA: o ficheiro .terraform.lock.hcl NÃO é ignorado de propósito. Deve ir
+# para o Git, porque fixa as versões dos providers e garante que toda a gente
+# (e a pipeline) usa exatamente as mesmas.
+
+
+# -----------------------------------------------------------------------------
+# 3. TESTES E NODE.JS  (Playwright, relatórios; usado no Projeto B)
+# -----------------------------------------------------------------------------
+# Dependências instaladas por `npm install`. Pesadas e reconstruíveis a partir
+# do package.json.
+node_modules/
+
+# Relatórios e resultados gerados quando os testes correm. São saídas, não
+# código-fonte; a pipeline volta a gerá-los em cada execução.
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+
+
+# -----------------------------------------------------------------------------
+# 4. PYTHON  (testes de API com pytest, scripts de apoio)
+# -----------------------------------------------------------------------------
+# Ficheiros compilados automaticamente pelo Python.
+__pycache__/
+*.pyc
+
+# Ambiente virtual (cópia local das bibliotecas). Reconstrói-se com
+# `pip install -r requirements.txt`.
+.venv/
+
+
+# -----------------------------------------------------------------------------
+# 5. SISTEMA OPERATIVO E EDITORES
+# -----------------------------------------------------------------------------
+# Ficheiros que o macOS e o Windows criam sozinhos nas pastas.
+.DS_Store
+Thumbs.db
+
+# Configurações pessoais do editor (VS Code, JetBrains). Cada pessoa tem as suas.
+.vscode/
+.idea/

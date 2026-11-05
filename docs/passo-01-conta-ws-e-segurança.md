@@ -1,0 +1,222 @@
+# Passo 01 – Conta AWS segura, repositório Git, IAM, orçamento e CLI
+
+**Objetivo:** ter uma conta AWS pronta e segura para trabalhar, um repositório Git para guardar o projeto, alertas de custo e a linha de comandos configurada.
+
+**Duração estimada:** 2 a 3 horas.
+
+**Partes deste passo:**
+
+1. Criar a conta AWS (plano gratuito)
+2. Proteger a conta de login com verificação em dois passos
+3. Criar o repositório Git e enviar a documentação
+4. Criar o utilizador IAM de trabalho
+5. Criar o orçamento com alertas
+6. Instalar e testar a AWS CLI
+
+---
+
+## 1. Teoria
+
+### 1.1 O que é a cloud?
+
+Cloud computing é o acesso, a pedido e através da internet, a recursos informáticos (computação, armazenamento, bases de dados, redes), pagando apenas pelo que se usa. As vantagens principais são a rapidez de criação de recursos, a escala flexível e a ausência de investimento inicial em hardware.
+
+Os três modelos de serviço:
+
+- **IaaS:** alugas a infraestrutura (máquinas virtuais, redes). Exemplo: EC2.
+- **PaaS:** alugas uma plataforma onde só colocas o código. Exemplo: Elastic Beanstalk.
+- **SaaS:** usas o software já pronto. Exemplo: Gmail.
+
+### 1.2 Regiões e zonas de disponibilidade
+
+A AWS divide-se em **regiões** (zonas geográficas). Cada região tem várias **zonas de disponibilidade (AZ)**, que são centros de dados isolados entre si, mas ligados por redes rápidas. Se uma AZ falhar, os recursos noutra AZ continuam a funcionar.
+
+Neste projeto usamos **`eu-north-1` (Estocolmo)**, a região em que o projeto AWS foi criado. A regra importante é **usar sempre a mesma região** na consola, na AWS CLI e no Terraform. Criar recursos numa região e procurá-los noutra é um erro muito comum.
+
+### 1.3 Modelo de responsabilidade partilhada
+
+- A **AWS** cuida da segurança *da* cloud: edifícios, hardware, rede física.
+- **Tu** cuidas da segurança *na* cloud: quem tem acesso, como configuras os recursos, que dados guardas.
+
+Quase todos os incidentes de segurança na cloud vêm de más configurações do cliente, não de falhas da AWS.
+
+### 1.4 A nova experiência de registo da AWS: projetos
+
+A conta deste projeto foi criada com a **nova experiência de registo** da AWS, que difere da clássica:
+
+- Entras com uma conta **Google, GitHub ou Apple** (neste caso, GitHub), em vez de criares um email e palavra-passe próprios da AWS.
+- A AWS cria automaticamente um **projeto**, que contém uma conta AWS onde crias os recursos e as definições de partilha com colaboradores.
+- O nome do projeto é **gerado pela AWS** (no nosso caso, "Caffeine Driven Development") e pode ser mudado quando quiseres.
+- A região do projeto é escolhida pela AWS.
+- Cada projeto traz funções (*roles*) criadas automaticamente (`AWSServiceRole...`). Não é preciso mexer nelas.
+
+**Consequência de segurança:** como entras através do GitHub, quem controlar a tua conta GitHub controla a tua conta AWS e os teus repositórios. Por isso o 2FA do GitHub é a primeira linha de defesa.
+
+### 1.5 Verificação em dois passos (2FA/MFA)
+
+Uma palavra-passe sozinha pode ser roubada, adivinhada ou apanhada num site falso. O 2FA acrescenta um segundo fator (por exemplo, uma aprovação no telemóvel), e sem ele um atacante não entra, mesmo com a palavra-passe.
+
+Boa prática: guardar os **códigos de recuperação** num sítio seguro e, se possível, ter um segundo método registado.
+
+### 1.6 IAM (Identity and Access Management)
+
+Conceitos essenciais:
+
+- **Utilizador IAM:** identidade para o trabalho diário, com permissões limitadas.
+- **Política:** documento JSON que lista o que é permitido ou negado.
+- **Papel (Role):** conjunto de permissões que pode ser assumido temporariamente por pessoas ou serviços (vamos usá-los muito mais à frente).
+- **Menor privilégio:** dar só as permissões necessárias.
+
+Exemplo de política que permite apenas ler objetos de um bucket S3:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::nome-do-bucket/*"
+    }
+  ]
+}
+```
+
+Nota: neste passo damos `AdministratorAccess` ao utilizador de estudo por simplicidade. Nos passos de Terraform e CI/CD vamos reduzir permissões e usar papéis, que é o que se espera numa vaga de DevOps.
+
+### 1.7 Git e GitHub
+
+- **Git** guarda o histórico de alterações dos ficheiros. **GitHub** aloja repositórios Git na internet.
+- Um **commit** é um retrato do estado dos ficheiros, com uma mensagem a explicar o que mudou.
+- O **push** envia os commits locais para o GitHub.
+- O ficheiro **`.gitignore`** lista o que o Git deve ignorar. É a nossa rede de segurança contra enviar segredos por engano.
+
+---
+
+## 2. Prática
+
+### Parte 1 – Criar a conta AWS ✅
+
+1. Criaste a conta em https://aws.amazon.com/free, entrando com o GitHub.
+2. Ficou ativo o **plano gratuito**, com 100 $ de créditos e 183 dias.
+
+### Parte 2 – Proteger o login ✅
+
+1. No GitHub: **Settings → Password and authentication**.
+2. Verifica que o 2FA está ativo (neste caso, via GitHub Mobile).
+3. Descarrega e guarda os **códigos de recuperação**. Idealmente, adiciona um segundo método (app de autenticação ou passkey).
+
+### Parte 3 – Criar o repositório e enviar a documentação
+
+1. No GitHub, cria um repositório **privado** e **vazio** (sem README, .gitignore ou licença) chamado `plataforma-cloud-qa`.
+2. Cria no teu computador a pasta `plataforma-cloud-qa`, com esta estrutura:
+
+   ```
+   plataforma-cloud-qa/
+   ├── .gitignore
+   ├── README.md
+   └── docs/
+       ├── glossario.md
+       └── passo-01-conta-aws-e-seguranca.md
+   ```
+
+3. Abre a pasta no VS Code, abre o terminal integrado e corre:
+
+   ```bash
+   git init
+   git branch -M main
+   git remote add origin https://github.com/RubenPereira1508/Plataforma-cloud-qa.git
+   git add .
+   git commit -m "docs: estrutura inicial e passo 01"
+   git push -u origin main
+   ```
+
+4. Confirma no GitHub que o README aparece formatado.
+
+O que faz cada comando:
+
+| Comando | O que faz |
+|---|---|
+| `git init` | Transforma a pasta num repositório Git. |
+| `git branch -M main` | Dá o nome `main` ao ramo principal. |
+| `git remote add origin ...` | Liga a pasta ao repositório do GitHub. |
+| `git add .` | Prepara todos os ficheiros para o commit. |
+| `git commit -m "..."` | Guarda o retrato dos ficheiros com uma mensagem. |
+| `git push -u origin main` | Envia o commit para o GitHub. |
+
+### Parte 4 – Criar o utilizador IAM de trabalho
+
+> A consola desta conta tem um aspeto diferente do habitual. Se algum nome de menu não coincidir, regista aqui o que encontraste.
+
+1. Na barra de pesquisa da consola, procura **IAM** e abre o serviço.
+2. No menu da esquerda, escolhe **IAM users** e depois **Create user**.
+3. Nome sugerido: `admin-estudo`.
+4. Para o acesso à consola, segue as opções que a consola oferecer. Associa a política `AdministratorAccess` (apenas para a fase de estudo).
+5. Se a consola permitir, ativa o **MFA** também neste utilizador.
+
+### Parte 5 – Criar um orçamento com alertas
+
+1. Abre **Billing** (pelo botão "Manage billing" ou pesquisando "Budgets").
+2. Cria um **orçamento de custo mensal** com um valor baixo (por exemplo, 5 USD) e o teu email para os alertas.
+3. Confirma em **Billing → Credits** quantos créditos tens e quando expiram. Algumas atividades de arranque dão créditos adicionais; confirma lá quais.
+
+### Parte 6 – Instalar e configurar a AWS CLI
+
+1. Instala a AWS CLI v2 seguindo as instruções oficiais para o teu sistema operativo.
+2. No utilizador IAM `admin-estudo`, cria uma chave de acesso para a CLI (separador de credenciais de segurança).
+3. Corre:
+
+   ```bash
+   aws configure
+   ```
+
+   e preenche a chave de acesso, a chave secreta, a região `eu-north-1` e o formato `json`.
+
+4. Valida que funciona:
+
+   ```bash
+   aws sts get-caller-identity
+   ```
+
+   O resultado deve mostrar o teu `UserId`, o número da conta e o ARN do utilizador `admin-estudo`.
+
+**Atenção:** nunca guardes chaves de acesso em ficheiros do repositório. Se uma chave for exposta, desativa-a e cria outra de imediato. Mais à frente vamos substituir chaves estáticas por papéis temporários (OIDC) na pipeline.
+
+---
+
+## 3. Autoavaliação
+
+Tenta responder sem consultar os apontamentos:
+
+1. Qual é a diferença entre uma região e uma zona de disponibilidade?
+2. Porque é que o 2FA do GitHub é tão importante nesta conta AWS?
+3. O que significa o princípio do menor privilégio? Dá um exemplo.
+4. Segundo o modelo de responsabilidade partilhada, quem é responsável por uma base de dados deixada aberta à internet?
+5. Para que serve o ficheiro `.gitignore` e o que aconteceria se uma chave da AWS fosse enviada para um repositório público?
+6. O que faz o comando `aws sts get-caller-identity` e porque é útil?
+
+---
+
+## 4. Registo do que fizeste
+
+| Tarefa | Feito | Data | Notas |
+|---|---|---|---|
+| Conta AWS criada (plano gratuito, login GitHub) | ✅ | 2026-11-05 | 100 $ de créditos, 183 dias |
+| 2FA no GitHub | ✅ | 2026-11-05 | Via GitHub Mobile |
+| Códigos de recuperação guardados | ☐ | | |
+| Repositório criado e primeiro push | ☐ | | |
+| Utilizador IAM `admin-estudo` | ☐ | | |
+| Orçamento com alertas | ☐ | | |
+| Créditos verificados em Billing | ☐ | | |
+| AWS CLI configurada e validada | ☐ | | |
+| EKS disponível no plano gratuito? | ☐ | | |
+
+## 5. Para a entrevista
+
+Perguntas que costumam aparecer e que este passo ajuda a responder:
+
+- Como proteges uma conta AWS nova?
+- O que é o modelo de responsabilidade partilhada?
+- Porque é que se usa menor privilégio?
+- Como controlas custos na cloud?
+- Como evitas expor segredos num repositório Git?
