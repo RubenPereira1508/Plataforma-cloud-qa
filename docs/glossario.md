@@ -43,6 +43,31 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Branch (ramo)** | Linha de desenvolvimento. `main` é o ramo principal. |
 | **.gitignore** | Ficheiro que lista o que o Git deve ignorar (segredos, ficheiros gerados). |
 
+## Docker e contentores
+
+| Termo | Significado |
+|---|---|
+| **Contentor** | Aplicação embrulhada com tudo o que precisa para correr, isolada do resto. Corre igual em qualquer sítio. |
+| **Imagem** | Modelo só de leitura a partir do qual se criam contentores. |
+| **Dockerfile** | Ficheiro com as instruções para construir uma imagem. |
+| **Camada (layer)** | Cada instrução do Dockerfile gera uma camada, guardada em cache para acelerar construções. |
+| **Registry** | Sítio onde se guardam e partilham imagens (Docker Hub, ECR da AWS). |
+| **Docker daemon** | Motor do Docker que corre em segundo plano e faz o trabalho; o comando `docker` fala com ele. |
+| **Porta publicada (`-p`)** | Ligação entre uma porta do teu computador e uma porta do contentor. |
+| **.dockerignore** | Lista do que o Docker não deve enviar para a construção da imagem (segredos, lixo). |
+| **Health check** | Verificação periódica que pergunta à aplicação se está viva. |
+| **API / endpoint** | Interface através da qual programas falam com a aplicação; endpoint é cada "endereço" dessa interface (ex.: `/produtos`). |
+| **Docker Compose** | Ferramenta que arranca vários contentores e as suas ligações a partir de um único ficheiro (`docker-compose.yml`). |
+| **Volume** | Pasta gerida pelo Docker que sobrevive aos contentores. Serve para guardar dados (ex.: da base de dados). |
+| **Variável de ambiente** | Valor de configuração passado a um programa por fora do código (ex.: palavra-passe, endereço da base de dados). |
+| **.env** | Ficheiro local com variáveis de ambiente. Nunca vai para o Git. |
+| **PostgreSQL** | Base de dados relacional de código aberto. |
+| **SQL** | Linguagem para consultar e alterar bases de dados. |
+| **SQL injection** | Ataque que mete comandos SQL em dados enviados pelo utilizador. Evita-se usando parâmetros. |
+| **Liveness / readiness** | Duas verificações de saúde: "estou vivo?" (reiniciar se falhar) e "estou pronto a receber pedidos?" (retirar tráfego se falhar). |
+| **Retry** | Tentar de novo uma operação que falhou, normalmente com uma pausa entre tentativas. |
+| **Código HTTP** | Número que indica o resultado de um pedido: 200 ok, 201 criado, 404 não encontrado, 422 dados inválidos. |
+
 ## DevOps e QA (serão aprofundados nos passos seguintes)
 
 | Termo | Significado |

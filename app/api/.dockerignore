@@ -1,0 +1,15 @@
+# .dockerignore
+# O que faz: lista o que o Docker NÃO deve enviar para o "contexto de build".
+# Porquê: deixa a construção mais rápida e, sobretudo, evita que segredos
+# (ficheiros .env, chaves) acabem por engano dentro da imagem.
+
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+tests/

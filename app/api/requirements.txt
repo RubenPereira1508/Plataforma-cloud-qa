@@ -1,0 +1,19 @@
+# requirements.txt – dependências Python da API da Loja
+#
+# O que faz: lista as bibliotecas que o `pip` tem de instalar dentro da imagem.
+#
+# Porque usamos intervalos de versões (>=, <) e não versões exatas:
+#   Neste passo ainda não temos a lista exata do que o pip instala. Mais tarde,
+#   quando a pipeline estiver montada, vamos "congelar" as versões exatas
+#   (pip freeze) para que todas as construções da imagem sejam idênticas.
+#   Versões fixas = resultados reproduzíveis (boa prática em DevOps).
+
+# Framework web da API (traz o Pydantic para validação de dados).
+fastapi>=0.115,<1.0
+
+# Servidor que corre a aplicação FastAPI e recebe os pedidos HTTP.
+uvicorn>=0.30,<1.0
+
+# Driver para falar com o PostgreSQL. A variante [binary] já traz a biblioteca
+# C necessária (libpq), por isso não precisamos de instalar nada no sistema.
+psycopg[binary]>=3.2,<4.0

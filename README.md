@@ -19,9 +19,11 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 .
 ├── README.md            # este ficheiro: visão geral, índice e decisões
 ├── .gitignore           # ficheiros que o Git não deve guardar (segredos, etc.)
+├── .env.example         # modelo da configuração local (o .env real não vai para o Git)
+├── docker-compose.yml   # (Passo 2) arranca a aplicação inteira localmente
 ├── docs/                # documentação de cada passo e glossário
 ├── .github/workflows/   # (Passo 4) pipelines CI/CD e execução de testes
-├── app/                 # (Passo 2) aplicação de microserviços
+├── app/                 # (Passo 2) aplicação da loja (API em Python)
 ├── infra/               # (Passo 3) Terraform
 ├── k8s/                 # (Passo 5) manifests, Helm e ArgoCD
 ├── observabilidade/     # (Passo 6) Prometheus, Grafana, Loki
@@ -33,7 +35,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | Passo | Tema | Estado |
 |---|---|---|
 | 01 | Conta AWS segura, repositório Git, IAM, orçamento e CLI | Concluído |
-| 02 | Docker e a aplicação de microserviços (local) | Por fazer |
+| 02 | Docker e a aplicação da loja (local) | Em curso |
 | 03 | Terraform: rede (VPC) e state remoto | Por fazer |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Por fazer |
 | 05 | Kubernetes e ArgoCD (GitOps) | Por fazer |
@@ -67,3 +69,4 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-05 | Usar a região `eu-north-1` (Estocolmo) | Foi a região atribuída ao projeto AWS; tem os serviços necessários. Usar sempre a mesma região |
 | 2026-11-05 | Conta AWS criada com a nova experiência (login via GitHub) | Acesso protegido pela conta GitHub, por isso o 2FA do GitHub é obrigatório |
 | 2026-11-05 | Um único repositório para os Projetos A e B | O B testa a aplicação do A e a pipeline é partilhada |
+| 2026-11-05 | Aplicação própria (FastAPI + PostgreSQL + frontend simples) em vez de um fork de uma app grande | Mais fácil de perceber peça a peça, mais leve no portátil e permite criar falhas controladas para o QA |

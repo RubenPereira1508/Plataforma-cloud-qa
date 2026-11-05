@@ -1,0 +1,73 @@
+# =============================================================================
+# docker-compose.yml – arranca a aplicação inteira (API + base de dados)
+# -----------------------------------------------------------------------------
+# O que faz: descreve vários contentores e como se ligam entre si, num só
+# ficheiro. Em vez de escreveres vários `docker run` compridos, usas:
+#
+#   docker compose up -d --build     (arrancar tudo)
+#   docker compose ps                (ver o estado)
+#   docker compose logs api          (ver os registos da API)
+#   docker compose down              (parar e remover os contentores)
+#   docker compose down -v           (idem + APAGAR os dados da base de dados)
+#
+# Os valores ${...} vêm do ficheiro .env (que NÃO vai para o Git).
+# Copia o .env.example para .env e ajusta a palavra-passe.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Base de dados PostgreSQL
+  # ---------------------------------------------------------------------------
+  db:
+    # Versão fixa (16) e variante "alpine" (pequena). Fixar a versão evita
+    # surpresas quando sai uma versão nova.
+    image: postgres:16-alpine
+
+    # Variáveis que a imagem oficial do Postgres usa para criar o utilizador,
+    # a palavra-passe e a base de dados na primeira vez que arranca.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    # Volume: pasta gerida pelo Docker que SOBREVIVE a contentores apagados.
+    # Sem isto, os dados desapareciam quando o contentor fosse removido.
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+
+    # Health check: o pg_isready pergunta ao Postgres se já aceita ligações.
+    # O "$$" escapa o cifrão para o Compose não o substituir: a variável é
+    # lida de dentro do contentor.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    # Repara que NÃO publicamos a porta 5432 para o teu computador. A base de
+    # dados só é acessível pelos outros contentores desta rede. Menos portas
+    # abertas = menos superfície de ataque.
+
+  # ---------------------------------------------------------------------------
+  # API da loja
+  # ---------------------------------------------------------------------------
+  api:
+    # Constrói a imagem a partir do Dockerfile em app/api.
+    build: ./app/api
+
+    environment:
+      # Dentro da rede do Compose, cada serviço é encontrado pelo seu NOME.
+      # Por isso o endereço da base de dados é "db" (o nome do serviço acima).
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+    ports:
+      - "8000:8000"
+
+    # Só arranca a API depois de a base de dados estar "healthy".
+    depends_on:
+      db:
+        condition: service_healthy
+
+# Declaração do volume usado acima.
+volumes:
+  dados-postgres:
