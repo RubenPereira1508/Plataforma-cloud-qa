@@ -7,7 +7,7 @@
 - A. Primeiros contentores (`hello-world`, `nginx`) ✅
 - B. Construir a imagem da API e correr o contentor ✅
 - C. Juntar uma base de dados PostgreSQL com Docker Compose ✅
-- D. Frontend simples com nginx
+- D. Frontend simples com nginx ✅
 
 ---
 
@@ -47,16 +47,17 @@ Um contentor tem a sua própria rede. Para o aceder a partir do teu computador, 
 
 ### 1.7 A API da loja
 
-É uma API em Python (FastAPI) com 4 endpoints:
+É uma API em Python (FastAPI) com 5 endpoints:
 
 | Método | Endereço | O que faz |
 |---|---|---|
-| GET | `/saude` | Diz se a API está viva |
+| GET | `/saude` | Diz se a API está viva (liveness) |
+| GET | `/pronto` | Diz se a API está pronta e consegue falar com a base de dados (readiness; existe a partir da Parte C) |
 | GET | `/produtos` | Lista os produtos |
 | GET | `/produtos/{id}` | Devolve um produto (ou 404) |
 | POST | `/produtos` | Cria um produto (ou 422 se os dados forem inválidos) |
 
-Neste momento os dados ficam em memória. No Passo C passamos para PostgreSQL.
+Na Parte B os dados ficam em memória; na Parte C passam para uma base de dados PostgreSQL.
 
 **Porque uma aplicação própria e não uma já feita?** Para perceberes cada peça. Além disso, uma aplicação controlada por nós permite criar testes e falhas à medida no Projeto B.
 
@@ -276,7 +277,7 @@ O `-v` apaga os volumes. Ao arrancar de novo, a base de dados volta vazia (a API
 | `docker compose down` | Para e remove contentores (o volume fica) |
 | `docker compose down -v` | Idem, e apaga também os volumes (perdes os dados) |
 
-### Parte D – Frontend com nginx
+### Parte D – Frontend com nginx ✅
 
 **1. Ficheiros novos** (cria a pasta `app/frontend/`):
 
@@ -327,28 +328,9 @@ git commit -m "feat: frontend com nginx e proxy para a API"
 git push
 ```
 
-
 ---
 
-## 3. Autoavaliação
-
-1. Qual é a diferença entre uma imagem e um contentor?
-2. Porque é que no Dockerfile copiamos o `requirements.txt` e instalamos as dependências **antes** de copiar o `main.py`?
-3. O que significa `-p 8000:8000` no `docker run`?
-4. Porque é que a aplicação usa `--host 0.0.0.0` e não `127.0.0.1`?
-5. Porque é que o contentor não corre como `root`?
-6. Porque é que os produtos desapareciam quando o contentor reiniciava, e porque deixaram de desaparecer?
-7. O que é um volume e qual a diferença entre `docker compose down` e `docker compose down -v`?
-8. Porque é que a API usa `db` como endereço da base de dados?
-9. Porque é que a palavra-passe está num `.env` e não no `docker-compose.yml`? O que vai e o que não vai para o Git?
-10. Qual é a diferença entre `/saude` e `/pronto`?
-11. O que é um proxy inverso e que vantagens tem aqui?
-12. Porque é que o frontend fala com `/api` e não diretamente com `localhost:8000`?
-13. Porque é que a página usa `textContent` em vez de `innerHTML`?
-
----
-
-## 4. Registo do que fizeste
+## 3. Registo do que fizeste
 
 | Tarefa | Feito | Data | Notas |
 |---|---|---|---|
@@ -361,20 +343,41 @@ git push
 | `.env` criado (fora do Git) | ✅ | 2026-11-05 | |
 | `docker compose up` com API + PostgreSQL | ✅ | 2026-11-05 | |
 | Dados persistem após restart | ✅ | 2026-11-05 | |
-| Frontend a funcionar em `localhost:8080` | ☐ | | |
-| Proxy `/api` a funcionar | ☐ | | |
+| Frontend a funcionar em `localhost:8080` | ✅ | 2026-11-05 | Lista e cria produtos; mostra o erro 422 |
+| Proxy `/api` a funcionar | ✅ | 2026-11-05 | `/api/produtos` devolve o JSON da API |
 | Commit e push do Passo 2 | ☐ | | |
 
-## 5. Para a entrevista
+## 4. Para a entrevista
 
-- O que é um contentor e em que difere de uma máquina virtual?
-- O que é um Dockerfile e como funciona a cache de camadas?
-- Porque é que não se deve correr um contentor como root?
-- Para que serve um health check?
-- Como é que evitas que segredos entrem numa imagem Docker?
-- Qual é a diferença entre liveness e readiness?
-- Porque é que os dados de uma base de dados num contentor ficam num volume?
-- O que é SQL injection e como se evita?
-- O que é um proxy inverso? Qual a diferença para um proxy normal?
-- O que é CORS e como se evita ou resolve?
-- O que é XSS e como se previne?
+**O que é um contentor e em que difere de uma máquina virtual?**
+Um contentor empacota a aplicação e as suas dependências e partilha o kernel do sistema operativo do computador. Uma VM inclui um sistema operativo completo sobre um hipervisor. Os contentores são mais leves e arrancam em segundos; as VMs isolam mais.
+
+**O que é um Dockerfile e como funciona a cache de camadas?**
+É o ficheiro com as instruções para construir uma imagem. Cada instrução cria uma camada, e o Docker reutiliza as que não mudaram. Por isso põe-se primeiro o que muda pouco (dependências) e depois o que muda muito (código). Se uma camada muda, as seguintes são reconstruídas.
+
+**Porque é que não se deve correr um contentor como root?**
+Menor privilégio: se a aplicação for comprometida, o atacante fica com poderes limitados em vez de ter controlo total dentro do contentor.
+
+**Para que serve um health check?**
+É uma verificação periódica de que a aplicação funciona. Permite ao Docker ou ao Kubernetes detetar falhas (reiniciar o contentor ou parar de lhe enviar tráfego) e controlar a ordem de arranque dos serviços.
+
+**Como é que evitas que segredos entrem numa imagem Docker?**
+Não copio `.env` nem chaves (`.dockerignore`), não ponho segredos em `ENV`/`ARG` no Dockerfile (ficam nas camadas) e injeto-os em execução, por variáveis de ambiente ou por um gestor de segredos.
+
+**Qual é a diferença entre liveness e readiness?**
+Liveness pergunta "estás vivo?": se falhar, reinicia-se. Readiness pergunta "estás pronto a receber pedidos?": se falhar, retira-se do tráfego sem reiniciar.
+
+**Porque é que os dados de uma base de dados num contentor ficam num volume?**
+Porque os contentores são descartáveis e tudo o que está dentro perde-se com eles. O volume vive fora do ciclo de vida do contentor, por isso os dados persistem.
+
+**O que é SQL injection e como se evita?**
+É inserir comandos SQL nos dados de entrada para manipular a base de dados. Evita-se com queries parametrizadas, validação de entradas e uma conta da base de dados com permissões mínimas.
+
+**O que é um proxy inverso? Qual a diferença para um proxy normal?**
+Um proxy inverso fica do lado do servidor: recebe os pedidos dos clientes e reencaminha-os para serviços internos (esconde os servidores). Um proxy normal fica do lado do cliente e faz pedidos em nome dele (esconde o cliente).
+
+**O que é CORS e como se evita ou resolve?**
+É uma regra do browser que bloqueia pedidos JavaScript para outra origem (domínio, porta ou protocolo diferentes), salvo se o servidor os autorizar com cabeçalhos CORS. Resolve-se servindo tudo da mesma origem (proxy inverso) ou autorizando só as origens necessárias.
+
+**O que é XSS e como se previne?**
+É injetar scripts maliciosos numa página, que correm no browser da vítima. Previne-se tratando os dados como texto (`textContent`), escapando o conteúdo mostrado, validando entradas e usando uma Content-Security-Policy.

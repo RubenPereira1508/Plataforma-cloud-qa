@@ -189,20 +189,7 @@ O que faz cada comando:
 
 ---
 
-## 3. Autoavaliação
-
-Tenta responder sem consultar os apontamentos:
-
-1. Qual é a diferença entre uma região e uma zona de disponibilidade?
-2. Porque é que o 2FA do GitHub é tão importante nesta conta AWS?
-3. O que significa o princípio do menor privilégio? Dá um exemplo.
-4. Segundo o modelo de responsabilidade partilhada, quem é responsável por uma base de dados deixada aberta à internet?
-5. Para que serve o ficheiro `.gitignore` e o que aconteceria se uma chave da AWS fosse enviada para um repositório público?
-6. O que faz o comando `aws sts get-caller-identity` e porque é útil?
-
----
-
-## 4. Registo do que fizeste
+## 3. Registo do que fizeste
 
 | Tarefa | Feito | Data | Notas |
 |---|---|---|---|
@@ -216,7 +203,7 @@ Tenta responder sem consultar os apontamentos:
 | AWS CLI configurada e validada | ✅ | 2026-11-05 | `aws sts get-caller-identity` devolve `admin-estudo` |
 | EKS disponível no plano gratuito? | ☐ | | |
 
-## 5. Para a entrevista: 
+## 4. Para a entrevista
 
 **Como proteges uma conta AWS nova?**
 Ativo MFA, não uso a conta principal no dia a dia, crio utilizadores com permissões mínimas, protejo as chaves de acesso e configuro alertas de custo.

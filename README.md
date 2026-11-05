@@ -13,7 +13,7 @@ O Projeto B testa a aplicação que o Projeto A coloca em produção. Por isso v
 
 ## Como este repositório está organizado
 
-Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e **autoavaliação** (para confirmar que ficou percebido). As pastas vão sendo criadas à medida que cada passo as exige.
+Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e **perguntas de entrevista** (para treinar a explicar o que se fez). As pastas vão sendo criadas à medida que cada passo as exige.
 
 ```
 .
@@ -55,7 +55,7 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 1. **Língua:** português de Portugal em documentação e comentários.
 2. **Cabeçalho em cada ficheiro** (Terraform, YAML, scripts, testes, Dockerfiles): uma nota inicial a dizer o que o ficheiro faz e porque existe.
 3. **Comentários que explicam o porquê**, e não só o quê. Cada bloco ou linha menos óbvia explica a razão da escolha e, quando faz sentido, a alternativa descartada.
-4. **Um documento por passo** em `docs/`, com teoria, prática, autoavaliação e registo do que foi feito.
+4. **Um documento por passo** em `docs/`, com teoria, prática, registo do que foi feito e perguntas de entrevista.
 5. **Glossário vivo** em `docs/glossario.md`, atualizado a cada passo.
 6. **Segredos nunca entram no Git.** Chaves, palavras-passe e ficheiros `.env` ficam fora do repositório (ver `.gitignore`). Se uma chave for exposta por engano, desativa-se de imediato e cria-se outra.
 7. **Decisões importantes ficam registadas** na tabela abaixo.

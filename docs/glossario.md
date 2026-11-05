@@ -72,6 +72,10 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **CORS** | Regra dos browsers que bloqueia pedidos entre origens (endereços) diferentes, salvo autorização. Com proxy inverso a origem é a mesma. |
 | **XSS** | Ataque que injeta código malicioso numa página (ex.: via dados mostrados com innerHTML). Evita-se com textContent e validação. |
 | **data-testid** | Atributo HTML que dá aos testes automáticos um ponto de agarre estável. |
+| **Swagger / OpenAPI** | OpenAPI é o formato padrão para descrever APIs. Swagger UI é a página interativa gerada a partir dele (em `/docs`), onde se experimentam os endpoints. |
+| **Serviço (Compose)** | Cada componente descrito no `docker-compose.yml` (aqui: `db`, `api` e `frontend`). Cada serviço gera um ou mais contentores. |
+| **Rede do Compose** | Rede privada criada automaticamente para os contentores do mesmo Compose, onde se encontram pelo nome do serviço. |
+| **Máquina virtual (VM)** | Computador simulado, com sistema operativo completo, a correr sobre um hipervisor. Mais pesada e mais isolada do que um contentor. |
 | **Código HTTP** | Número que indica o resultado de um pedido: 200 ok, 201 criado, 404 não encontrado, 422 dados inválidos. |
 
 ## DevOps e QA (serão aprofundados nos passos seguintes)
