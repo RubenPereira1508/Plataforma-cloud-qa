@@ -106,7 +106,7 @@ Nota: neste passo damos `AdministratorAccess` ao utilizador de estudo por simpli
 2. Verifica que o 2FA está ativo (neste caso, via GitHub Mobile).
 3. Descarrega e guarda os **códigos de recuperação**. Idealmente, adiciona um segundo método (app de autenticação ou passkey).
 
-### Parte 3 – Criar o repositório e enviar a documentação
+### Parte 3 – Criar o repositório e enviar a documentação ✅
 
 1. No GitHub, cria um repositório **privado** e **vazio** (sem README, .gitignore ou licença) chamado `plataforma-cloud-qa`.
 2. Cria no teu computador a pasta `plataforma-cloud-qa`, com esta estrutura:
@@ -144,23 +144,26 @@ O que faz cada comando:
 | `git commit -m "..."` | Guarda o retrato dos ficheiros com uma mensagem. |
 | `git push -u origin main` | Envia o commit para o GitHub. |
 
-### Parte 4 – Criar o utilizador IAM de trabalho
+### Parte 4 – Criar o utilizador IAM de trabalho ✅
 
 > A consola desta conta tem um aspeto diferente do habitual. Se algum nome de menu não coincidir, regista aqui o que encontraste.
 
 1. Na barra de pesquisa da consola, procura **IAM** e abre o serviço.
 2. No menu da esquerda, escolhe **IAM users** e depois **Create user**.
 3. Nome sugerido: `admin-estudo`.
-4. Para o acesso à consola, segue as opções que a consola oferecer. Associa a política `AdministratorAccess` (apenas para a fase de estudo).
-5. Se a consola permitir, ativa o **MFA** também neste utilizador.
+4. **Não** atives o acesso à consola: entras na consola pelo GitHub, e este utilizador serve apenas para a linha de comandos (CLI e Terraform).
+5. Em permissões, escolhe **Attach policies directly** e marca a política chamada exatamente **`AdministratorAccess`** (tipo *AWS managed - job function*). Cuidado com as variantes com sufixo (por exemplo `AdministratorAccess-Amplify`), que não são as pretendidas: usa a caixa de pesquisa e confirma o nome completo. Isto é só para a fase de estudo.
+6. Cria o utilizador e confirma, no separador **Permissions**, que a política aparece ligada.
 
-### Parte 5 – Criar um orçamento com alertas
+### Parte 5 – Orçamento e controlo de custos (opcional)
 
 1. Abre **Billing** (pelo botão "Manage billing" ou pesquisando "Budgets").
 2. Cria um **orçamento de custo mensal** com um valor baixo (por exemplo, 5 USD) e o teu email para os alertas.
 3. Confirma em **Billing → Credits** quantos créditos tens e quando expiram. Algumas atividades de arranque dão créditos adicionais; confirma lá quais.
 
-### Parte 6 – Instalar e configurar a AWS CLI
+**O que encontrámos na prática:** nesta nova experiência, a página **Faturamento** das Configurações da AWS mostra o saldo (0,00 $), o plano (Gratuito), os dias restantes (182), os créditos (100 $) e o custo por projeto, mas **não** permite criar orçamentos. O plano gratuito **não cobra além dos créditos**: quando acabam, a conta fecha. Só passas a pagar se escolheres **Atualizar** (upgrade), por isso não o faças. O serviço AWS Budgets, se estiver disponível na consola principal, serve como camada extra, mas não é obrigatório.
+
+### Parte 6 – Instalar e configurar a AWS CLI ✅
 
 1. Instala a AWS CLI v2 seguindo as instruções oficiais para o teu sistema operativo.
 2. No utilizador IAM `admin-estudo`, cria uma chave de acesso para a CLI (separador de credenciais de segurança).
@@ -172,13 +175,15 @@ O que faz cada comando:
 
    e preenche a chave de acesso, a chave secreta, a região `eu-north-1` e o formato `json`.
 
+   No fim, a CLI pergunta se queres configurar *skills* e o servidor MCP da AWS para agentes de programação com IA. É opcional e altera configurações de outras ferramentas; respondemos `n` (agora não).
+
 4. Valida que funciona:
 
    ```bash
    aws sts get-caller-identity
    ```
 
-   O resultado deve mostrar o teu `UserId`, o número da conta e o ARN do utilizador `admin-estudo`.
+   O resultado deve mostrar o teu `UserId`, o número da conta e o ARN do utilizador `admin-estudo`. Este resultado não é secreto. **Resultado obtido:** o `Arn` termina em `user/admin-estudo`, por isso a CLI está a autenticar-se como o utilizador certo.
 
 **Atenção:** nunca guardes chaves de acesso em ficheiros do repositório. Se uma chave for exposta, desativa-a e cria outra de imediato. Mais à frente vamos substituir chaves estáticas por papéis temporários (OIDC) na pipeline.
 
@@ -204,11 +209,11 @@ Tenta responder sem consultar os apontamentos:
 | Conta AWS criada (plano gratuito, login GitHub) | ✅ | 2026-11-05 | 100 $ de créditos, 183 dias |
 | 2FA no GitHub | ✅ | 2026-11-05 | Via GitHub Mobile |
 | Códigos de recuperação guardados | ☐ | | |
-| Repositório criado e primeiro push | ☐ | | |
-| Utilizador IAM `admin-estudo` | ☐ | | |
-| Orçamento com alertas | ☐ | | |
-| Créditos verificados em Billing | ☐ | | |
-| AWS CLI configurada e validada | ☐ | | |
+| Repositório criado e primeiro push | ✅ | 2026-11-05 | Repositório privado `Plataforma-cloud-qa` |
+| Utilizador IAM `admin-estudo` | ✅ | 2026-11-05 | Sem acesso à consola; política `AdministratorAccess` |
+| Orçamento com alertas | ☐ | | Opcional: o plano gratuito não cobra além dos créditos |
+| Créditos verificados em Billing | ✅ | 2026-11-05 | 100 $, 182 dias |
+| AWS CLI configurada e validada | ✅ | 2026-11-05 | `aws sts get-caller-identity` devolve `admin-estudo` |
 | EKS disponível no plano gratuito? | ☐ | | |
 
 ## 5. Para a entrevista

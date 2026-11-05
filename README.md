@@ -32,7 +32,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 
 | Passo | Tema | Estado |
 |---|---|---|
-| 01 | Conta AWS segura, repositório Git, IAM, orçamento e CLI | Em curso |
+| 01 | Conta AWS segura, repositório Git, IAM, orçamento e CLI | Concluído |
 | 02 | Docker e a aplicação de microserviços (local) | Por fazer |
 | 03 | Terraform: rede (VPC) e state remoto | Por fazer |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Por fazer |
