@@ -1,0 +1,10 @@
+# .dockerignore do frontend
+# Evita enviar para a construção da imagem ficheiros desnecessários ou sensíveis.
+
+.env
+.env.*
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+node_modules/

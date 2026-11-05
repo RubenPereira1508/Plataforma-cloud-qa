@@ -1,5 +1,5 @@
 # =============================================================================
-# docker-compose.yml – arranca a aplicação inteira (API + base de dados)
+# docker-compose.yml – arranca a aplicação inteira (frontend + API + base de dados)
 # -----------------------------------------------------------------------------
 # O que faz: descreve vários contentores e como se ligam entre si, num só
 # ficheiro. Em vez de escreveres vários `docker run` compridos, usas:
@@ -9,6 +9,8 @@
 #   docker compose logs api          (ver os registos da API)
 #   docker compose down              (parar e remover os contentores)
 #   docker compose down -v           (idem + APAGAR os dados da base de dados)
+#
+# Depois de arrancar:  http://localhost:8080 (loja)  |  http://localhost:8000/docs (API)
 #
 # Os valores ${...} vêm do ficheiro .env (que NÃO vai para o Git).
 # Copia o .env.example para .env e ajusta a palavra-passe.
@@ -60,12 +62,31 @@ services:
       # Por isso o endereço da base de dados é "db" (o nome do serviço acima).
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
 
+    # A API continua publicada na 8000 para podermos usar o Swagger (/docs) e
+    # correr testes de API (Projeto B) diretamente. O frontend não precisa
+    # desta porta: fala com a API por dentro da rede do Compose.
     ports:
       - "8000:8000"
 
     # Só arranca a API depois de a base de dados estar "healthy".
     depends_on:
       db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Frontend (nginx): página web + proxy inverso para a API
+  # ---------------------------------------------------------------------------
+  frontend:
+    build: ./app/frontend
+
+    # É este o endereço que abres no browser: http://localhost:8080
+    ports:
+      - "8080:8080"
+
+    # O nginx resolve o nome "api" ao arrancar, por isso a API tem de existir
+    # (e estar saudável) antes do frontend.
+    depends_on:
+      api:
         condition: service_healthy
 
 # Declaração do volume usado acima.

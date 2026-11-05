@@ -20,10 +20,10 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 ├── README.md            # este ficheiro: visão geral, índice e decisões
 ├── .gitignore           # ficheiros que o Git não deve guardar (segredos, etc.)
 ├── .env.example         # modelo da configuração local (o .env real não vai para o Git)
-├── docker-compose.yml   # (Passo 2) arranca a aplicação inteira localmente
+├── docker-compose.yml   # (Passo 2) arranca frontend + API + base de dados localmente
 ├── docs/                # documentação de cada passo e glossário
 ├── .github/workflows/   # (Passo 4) pipelines CI/CD e execução de testes
-├── app/                 # (Passo 2) aplicação da loja (API em Python)
+├── app/                 # (Passo 2) aplicação da loja: api/ (Python) e frontend/ (nginx)
 ├── infra/               # (Passo 3) Terraform
 ├── k8s/                 # (Passo 5) manifests, Helm e ArgoCD
 ├── observabilidade/     # (Passo 6) Prometheus, Grafana, Loki

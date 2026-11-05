@@ -66,6 +66,12 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **SQL injection** | Ataque que mete comandos SQL em dados enviados pelo utilizador. Evita-se usando parâmetros. |
 | **Liveness / readiness** | Duas verificações de saúde: "estou vivo?" (reiniciar se falhar) e "estou pronto a receber pedidos?" (retirar tráfego se falhar). |
 | **Retry** | Tentar de novo uma operação que falhou, normalmente com uma pausa entre tentativas. |
+| **Frontend** | A parte da aplicação que o utilizador vê (página web). |
+| **nginx** | Servidor web leve; serve páginas estáticas e pode funcionar como proxy inverso. |
+| **Proxy inverso (reverse proxy)** | Servidor que recebe os pedidos e os reencaminha para outros serviços por trás. O cliente só vê um endereço. |
+| **CORS** | Regra dos browsers que bloqueia pedidos entre origens (endereços) diferentes, salvo autorização. Com proxy inverso a origem é a mesma. |
+| **XSS** | Ataque que injeta código malicioso numa página (ex.: via dados mostrados com innerHTML). Evita-se com textContent e validação. |
+| **data-testid** | Atributo HTML que dá aos testes automáticos um ponto de agarre estável. |
 | **Código HTTP** | Número que indica o resultado de um pedido: 200 ok, 201 criado, 404 não encontrado, 422 dados inválidos. |
 
 ## DevOps e QA (serão aprofundados nos passos seguintes)

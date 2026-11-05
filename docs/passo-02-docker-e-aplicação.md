@@ -6,8 +6,8 @@
 
 - A. Primeiros contentores (`hello-world`, `nginx`) ✅
 - B. Construir a imagem da API e correr o contentor ✅
-- C. Juntar uma base de dados PostgreSQL com Docker Compose
-- D. Frontend simples (por fazer)
+- C. Juntar uma base de dados PostgreSQL com Docker Compose ✅
+- D. Frontend simples com nginx
 
 ---
 
@@ -87,6 +87,24 @@ Vamos precisar desta distinção no Kubernetes.
 ### 1.12 SQL injection
 
 Os valores vão para a base de dados como **parâmetros** (`%s`), separados da instrução SQL. Nunca se constrói SQL juntando texto do utilizador, porque alguém podia enviar comandos maliciosos no lugar de um nome.
+
+### 1.13 O frontend e o proxy inverso
+
+O frontend é a parte que o utilizador vê: uma página HTML com JavaScript que pede dados à API. Quem a serve é o **nginx**, um servidor web muito leve.
+
+O nginx faz também de **proxy inverso**: recebe os pedidos do browser e reencaminha os que começam por `/api/` para a API, por dentro da rede do Compose.
+
+| Sem proxy | Com proxy inverso |
+|---|---|
+| O browser fala com dois endereços (página e API) | O browser fala com um só endereço |
+| Problemas de **CORS** (o browser bloqueia pedidos entre origens diferentes) | Sem CORS: a origem é a mesma |
+| A API tem de estar exposta ao exterior | A API pode ficar escondida na rede interna |
+
+É a mesma ideia do **Ingress** no Kubernetes e do **Load Balancer** na AWS, que vamos usar mais à frente.
+
+### 1.14 Pensar já nos testes (QA)
+
+A página tem atributos `data-testid` (ex.: `data-testid="botao-criar"`). Os testes automáticos do Projeto B agarram-se a eles em vez de dependerem de textos ou estilos, que mudam com frequência. Os testes ficam assim mais estáveis. Outra boa prática: os dados da API entram na página com `textContent` e não com `innerHTML`, para evitar **XSS** (injeção de código malicioso).
 
 ---
 
@@ -258,7 +276,57 @@ O `-v` apaga os volumes. Ao arrancar de novo, a base de dados volta vazia (a API
 | `docker compose down` | Para e remove contentores (o volume fica) |
 | `docker compose down -v` | Idem, e apaga também os volumes (perdes os dados) |
 
-### Parte D – Frontend (por fazer)
+### Parte D – Frontend com nginx
+
+**1. Ficheiros novos** (cria a pasta `app/frontend/`):
+
+```
+app/frontend/
+├── index.html        # a página (HTML + CSS + JavaScript)
+├── nginx.conf        # serve a página e reencaminha /api para a API
+├── Dockerfile        # imagem do frontend
+└── .dockerignore
+```
+
+E **substitui** o `docker-compose.yml` da raiz pelo novo (tem um terceiro serviço, `frontend`).
+
+**2. Arranca tudo** (reconstrói e junta o frontend):
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+Deves ver 3 serviços: `db`, `api` e `frontend`, todos `healthy` ao fim de uns 30 segundos.
+
+**3. Abre a loja:** `http://localhost:8080`
+
+**4. Experimenta:**
+- Vê a lista de produtos (vêm da base de dados, através da API).
+- Cria um produto pelo formulário e confirma que aparece na lista.
+- Tenta criar um com **preço negativo**: deve aparecer uma mensagem de erro (é a validação da API, o erro 422).
+- Recarrega a página: os produtos continuam lá.
+
+**5. Vê o proxy a funcionar.** Abre `http://localhost:8080/api/produtos` no browser: é a API, mas acedida **através do nginx**. Compara com `http://localhost:8000/produtos` (acesso direto): a resposta é a mesma.
+
+**6. Vê o que cada contentor registou:**
+
+```bash
+docker compose logs frontend
+docker compose logs api
+```
+
+No `frontend` aparecem os pedidos do browser, e na `api` os que o nginx reencaminhou.
+
+**7. Guarda no GitHub:**
+
+```bash
+git status
+git add .
+git commit -m "feat: frontend com nginx e proxy para a API"
+git push
+```
+
 
 ---
 
@@ -274,6 +342,9 @@ O `-v` apaga os volumes. Ao arrancar de novo, a base de dados volta vazia (a API
 8. Porque é que a API usa `db` como endereço da base de dados?
 9. Porque é que a palavra-passe está num `.env` e não no `docker-compose.yml`? O que vai e o que não vai para o Git?
 10. Qual é a diferença entre `/saude` e `/pronto`?
+11. O que é um proxy inverso e que vantagens tem aqui?
+12. Porque é que o frontend fala com `/api` e não diretamente com `localhost:8000`?
+13. Porque é que a página usa `textContent` em vez de `innerHTML`?
 
 ---
 
@@ -287,9 +358,12 @@ O `-v` apaga os volumes. Ao arrancar de novo, a base de dados volta vazia (a API
 | API a responder em `localhost:8000` | ✅ | 2026-11-05 | Swagger em `/docs` |
 | Health check `healthy` | ✅ | 2026-11-05 | |
 | Dados perdem-se ao reiniciar (confirmado) | ✅ | 2026-11-05 | Com a versão em memória |
-| `.env` criado (fora do Git) | ☐ | | |
-| `docker compose up` com API + PostgreSQL | ☐ | | |
-| Dados persistem após restart e após `down`/`up` | ☐ | | |
+| `.env` criado (fora do Git) | ✅ | 2026-11-05 | |
+| `docker compose up` com API + PostgreSQL | ✅ | 2026-11-05 | |
+| Dados persistem após restart | ✅ | 2026-11-05 | |
+| Frontend a funcionar em `localhost:8080` | ☐ | | |
+| Proxy `/api` a funcionar | ☐ | | |
+| Commit e push do Passo 2 | ☐ | | |
 
 ## 5. Para a entrevista
 
@@ -301,3 +375,6 @@ O `-v` apaga os volumes. Ao arrancar de novo, a base de dados volta vazia (a API
 - Qual é a diferença entre liveness e readiness?
 - Porque é que os dados de uma base de dados num contentor ficam num volume?
 - O que é SQL injection e como se evita?
+- O que é um proxy inverso? Qual a diferença para um proxy normal?
+- O que é CORS e como se evita ou resolve?
+- O que é XSS e como se previne?

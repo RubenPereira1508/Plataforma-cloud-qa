@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+  index.html – Frontend da Loja (Projeto A)
+
+  O que faz:
+    Página simples que mostra os produtos e permite criar novos, falando com a
+    API através do endereço /api (o nginx reencaminha para a API; ver nginx.conf).
+
+  Porque existe:
+    Dá-nos uma interface real para testar com o Playwright no Projeto B.
+
+  Boas práticas que aplicamos:
+    - Os atributos data-testid dão aos testes automáticos pontos de agarre
+      estáveis (não dependem de textos ou estilos que podem mudar).
+    - Os dados vindos da API são inseridos com textContent (e não innerHTML),
+      para evitar XSS (injeção de código malicioso na página).
+-->
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loja</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; margin: 0; }
+    main { max-width: 560px; margin: 2rem auto; padding: 0 1rem; }
+    section { background: #fff; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    ul { padding-left: 1.25rem; }
+    label { display: block; margin-bottom: .75rem; }
+    input { display: block; width: 100%; padding: .4rem; box-sizing: border-box; }
+    button { padding: .5rem 1rem; cursor: pointer; }
+    #erro { color: #b00020; min-height: 1.2rem; }
+    #estado { color: #555; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Loja</h1>
+
+    <section>
+      <h2>Produtos</h2>
+      <!-- Mostra "A carregar..." ou mensagens de erro de ligação. -->
+      <p id="estado" data-testid="estado"></p>
+      <ul id="lista-produtos" data-testid="lista-produtos"></ul>
+    </section>
+
+    <section>
+      <h2>Novo produto</h2>
+      <form id="form-produto" data-testid="form-produto">
+        <label>Nome
+          <input id="nome" name="nome" data-testid="input-nome" maxlength="100" required>
+        </label>
+        <label>Preço (€)
+          <!--
+            Propositadamente SEM min="0.01": assim um preço inválido chega à
+            API e vemos a validação do servidor (erro 422) a funcionar.
+            É também um bom caso de teste para o Projeto B.
+          -->
+          <input id="preco" name="preco" data-testid="input-preco" type="number" step="0.01" required>
+        </label>
+        <button type="submit" data-testid="botao-criar">Criar produto</button>
+        <p id="erro" role="alert" data-testid="erro"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    // Prefixo dos pedidos à API. O nginx reencaminha /api/... para a API.
+    // Como o browser só fala com UM endereço (o do nginx), não há problemas de CORS.
+    const API = "/api";
+
+    const listaEl = document.getElementById("lista-produtos");
+    const estadoEl = document.getElementById("estado");
+    const erroEl = document.getElementById("erro");
+    const formEl = document.getElementById("form-produto");
+
+    // Formata números como moeda em português (ex.: 49,90 €).
+    const euros = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
+
+    // Vai buscar os produtos à API e desenha a lista.
+    async function carregarProdutos() {
+      estadoEl.textContent = "A carregar...";
+      try {
+        const resposta = await fetch(`${API}/produtos`);
+        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+        const produtos = await resposta.json();
+
+        listaEl.replaceChildren(); // limpa a lista
+        for (const p of produtos) {
+          const li = document.createElement("li");
+          li.dataset.testid = "produto";
+          li.textContent = `${p.nome} – ${euros.format(p.preco)}`; // textContent: seguro contra XSS
+          listaEl.appendChild(li);
+        }
+        estadoEl.textContent = produtos.length === 0 ? "Ainda não há produtos." : "";
+      } catch (e) {
+        estadoEl.textContent = "Não foi possível carregar os produtos.";
+      }
+    }
+
+    // Envia o formulário para criar um produto.
+    formEl.addEventListener("submit", async (evento) => {
+      evento.preventDefault(); // evita que o browser recarregue a página
+      erroEl.textContent = "";
+
+      const dados = {
+        nome: document.getElementById("nome").value,
+        preco: parseFloat(document.getElementById("preco").value),
+      };
+
+      try {
+        const resposta = await fetch(`${API}/produtos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dados),
+        });
+
+        if (resposta.status === 422) {
+          // A API rejeitou os dados (validação do servidor).
+          erroEl.textContent = "Dados inválidos: o nome tem de ter 1 a 100 caracteres e o preço tem de ser maior que 0.";
+          return;
+        }
+        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+
+        formEl.reset();
+        await carregarProdutos(); // atualiza a lista com o produto novo
+      } catch (e) {
+        erroEl.textContent = "Não foi possível criar o produto. Tenta de novo.";
+      }
+    });
+
+    // Ao abrir a página, carrega os produtos.
+    carregarProdutos();
+  </script>
+</body>
+</html>
