@@ -213,9 +213,62 @@ No `git status` confirma que **não** aparecem a pasta `.terraform/` nem ficheir
 
 ![Bucket S3 criado pelo Terraform, visto na consola AWS](imagens/passo-03-bucket-s3-consola.png)
 
-### Parte C – Estado remoto (por fazer)
+### Parte C – Estado remoto ✅
 
-### Parte D – Rede: VPC (por fazer)
+**A ideia:** no exercício da Parte B o state ficou num ficheiro local. Se o computador avaria ou a pasta é apagada, o Terraform esquece-se do que criou, e numa equipa (ou numa pipeline) cada pessoa teria uma memória diferente. A solução é guardar o state num **backend remoto**: um bucket S3 central e seguro.
+
+**O problema do ovo e da galinha:** para guardar o state num bucket, o bucket tem de existir primeiro. Por isso a parte faz-se em duas pastas:
+
+| Pasta | O que cria | Onde fica o state |
+|---|---|---|
+| `infra/01-estado-remoto` | Só o bucket do state | Local (não pode ficar num bucket que ainda não existe) |
+| `infra/02-rede` | A VPC (rede privada, gratuita) | No bucket, em `rede/terraform.tfstate` |
+
+**O bucket do state** (`infra/01-estado-remoto`) tem proteções que o bucket de teste não tinha:
+
+| Característica | Para quê |
+|---|---|
+| Versionamento | Guarda as versões antigas do state; se um `apply` o estragar, volta-se atrás |
+| Encriptação (AES256) | O state pode conter dados sensíveis |
+| Acesso público bloqueado | Ninguém de fora lhe chega |
+| `prevent_destroy` | O Terraform recusa apagá-lo; perdê-lo é perder a memória de tudo |
+
+Não tem `force_destroy`, ao contrário do bucket de teste.
+
+**O backend** (`infra/02-rede/versions.tf`) diz ao Terraform onde guardar o state:
+
+| Campo | O que faz |
+|---|---|
+| `bucket` | O bucket do state (escrito à mão: o bloco `backend` não aceita variáveis) |
+| `key` | O caminho do ficheiro dentro do bucket; cada pasta do projeto usa a sua |
+| `encrypt` | Encripta o ficheiro ao guardar |
+| `use_lockfile` | Bloqueio nativo do S3: impede dois `apply` em simultâneo (desde o Terraform 1.10 já não é preciso DynamoDB) |
+
+**Duas coisas que não se devem misturar:** a VPC não guarda o state; é só o primeiro recurso do projeto cuja memória ficou no bucket. E o backend decide *onde* o state vive; as *versões antigas* vêm do versionamento do bucket.
+
+**Resultado:** o `terraform init` mostrou `Successfully configured the backend "s3"!`, o `apply` criou a VPC `vpc-065d19702d61a4b35` e o state apareceu no bucket. O segundo `plan` deu `No changes`, agora lendo o state a partir do S3.
+
+O bucket do state, com versionamento ativo e encriptação por omissão:
+
+![Bucket do state na consola S3](imagens/passo-03-bucket-estado-consola.png)
+
+![Versionamento do bucket ativo](imagens/passo-03-bucket-estado-versionamento.png)
+
+![Encriptação por omissão do bucket](imagens/passo-03-bucket-estado-encriptacao.png)
+
+A prova de que o state saiu do computador: a pasta `rede/` e, lá dentro, o `terraform.tfstate`, modificado à hora do `apply`:
+
+![Pasta rede/ dentro do bucket do state](imagens/passo-03-estado-remoto-pasta.png)
+
+![terraform.tfstate dentro do bucket](imagens/passo-03-estado-remoto-no-s3.png)
+
+A VPC criada pelo Terraform, vista na consola AWS (a outra, sem nome, é a VPC por omissão da AWS e não é nossa):
+
+![VPC plataforma-cloud-qa na consola AWS](imagens/passo-03-vpc-consola.png)
+
+> **Nota:** o state da pasta `01-estado-remoto` continua local. É aceite, porque essa pasta quase nunca muda. Não se apaga o ficheiro `terraform.tfstate` dessa pasta.
+
+### Parte D – Rede: sub-redes, internet gateway e rotas (por fazer)
 
 ### Parte E – Fecho (por fazer)
 
@@ -229,9 +282,14 @@ No `git status` confirma que **não** aparecem a pasta `.terraform/` nem ficheir
 | `init`, `validate` e `plan` do exercício | ✅ | 2026-11-05 | Plano: 3 a criar, 0 a alterar, 0 a apagar |
 | `apply`: bucket criado | ✅ | 2026-11-06 | 3 recursos criados |
 | Bucket visto com `aws s3 ls` e na consola | ✅ | 2026-11-06 | Imagem em `docs/imagens/` |
-| `plan` sem alterações (idempotência) | ✅ | | |
-| `destroy`: bucket removido | ✅ | | |
-| Commit e push | ✅ | | |
+| `plan` sem alterações (idempotência) | ✅ | 2026-11-06 | No changes |
+| `destroy`: bucket removido | ✅ | 2026-11-06 | 3 recursos destruídos; `aws s3 ls` vazio |
+| Commit e push do exercício | ✅ | 2026-11-06 | |
+| Parte C: bucket do state criado (`01-estado-remoto`) | ✅ | 2026-11-06 | Versionamento e encriptação ativos |
+| Parte C: backend S3 configurado e VPC criada (`02-rede`) | ✅ | 2026-11-06 | State em `rede/terraform.tfstate` |
+| Parte C: `plan` sem alterações com state remoto | ✅ | 2026-11-06 | |
+| Parte C: print da VPC na consola | ☐ | | `passo-03-vpc-consola.png` |
+| Parte C: commit e push | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -255,3 +313,15 @@ Um plugin que permite ao Terraform falar com uma plataforma (AWS, Azure, etc.).
 
 **Para que serve o `.terraform.lock.hcl`?**
 Fixa as versões exatas dos providers, para que todos usem as mesmas. Vai para o Git.
+
+**O que é um backend remoto e porque se usa?**
+É o sítio onde o Terraform guarda o state. Em vez de ficar num ficheiro local, fica num bucket S3, para não se perder, ser partilhado pela equipa e pela pipeline, e ter bloqueio contra execuções simultâneas.
+
+**Porque é que o bucket do state não pode guardar o seu próprio state logo à partida?**
+Porque o bucket tem de existir antes de o state lá poder ficar (o problema do ovo e da galinha). Cria-se o bucket com state local e, a partir daí, as outras pastas usam-no como backend.
+
+**Que proteções deve ter um bucket de state?**
+Versionamento (para recuperar versões antigas), encriptação, acesso público bloqueado e proteção contra remoção acidental.
+
+**O que faz o bloqueio do state (`use_lockfile`)?**
+Impede que dois `apply` corram ao mesmo tempo sobre o mesmo state e o corrompam. Desde o Terraform 1.10 o S3 faz isto sozinho, sem tabela DynamoDB.
