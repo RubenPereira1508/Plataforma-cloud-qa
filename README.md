@@ -24,7 +24,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 ├── docs/                # documentação de cada passo e glossário
 ├── .github/workflows/   # (Passo 4) pipelines CI/CD e execução de testes
 ├── app/                 # (Passo 2) aplicação da loja: api/ (Python) e frontend/ (nginx)
-├── infra/               # (Passo 3) Terraform
+├── infra/               # (Passo 3) Terraform: 00-exercicio-s3/, estado remoto e rede
 ├── k8s/                 # (Passo 5) manifests, Helm e ArgoCD
 ├── observabilidade/     # (Passo 6) Prometheus, Grafana, Loki
 └── qa/                  # (Passos 7 a 9) testes de API, E2E, k6, Pact, chaos
@@ -36,7 +36,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 |---|---|---|
 | 01 | Conta AWS segura, repositório Git, IAM, orçamento e CLI | Concluído |
 | 02 | Docker e a aplicação da loja (local) | Em curso |
-| 03 | Terraform: rede (VPC) e state remoto | Por fazer |
+| 03 | Terraform: estado remoto e rede (VPC) | Em curso |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Por fazer |
 | 05 | Kubernetes e ArgoCD (GitOps) | Por fazer |
 | 06 | Observabilidade e segredos | Por fazer |

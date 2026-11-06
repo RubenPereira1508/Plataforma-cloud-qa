@@ -78,6 +78,26 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Máquina virtual (VM)** | Computador simulado, com sistema operativo completo, a correr sobre um hipervisor. Mais pesada e mais isolada do que um contentor. |
 | **Código HTTP** | Número que indica o resultado de um pedido: 200 ok, 201 criado, 404 não encontrado, 422 dados inválidos. |
 
+## Terraform
+
+| Termo | Significado |
+|---|---|
+| **Terraform** | Ferramenta de infraestrutura como código: descreves o que queres em ficheiros `.tf` e ela cria, altera ou apaga os recursos. |
+| **Declarativo** | Descrever o resultado pretendido (a "planta"), deixando à ferramenta a decisão dos passos. |
+| **Provider** | Plugin que permite ao Terraform falar com uma plataforma (ex.: `aws`). |
+| **Resource** | Item de infraestrutura a criar (ex.: um bucket, uma sub-rede). |
+| **Data source** | Consulta a informação que já existe, sem criar nada. |
+| **Variable / Output** | Valor de entrada configurável / valor mostrado no fim da execução. |
+| **Module** | Conjunto de recursos reutilizável. |
+| **State** | Ficheiro onde o Terraform regista o que criou. Pode ter dados sensíveis; não vai para o Git. |
+| **Estado remoto e lock** | Guardar o state fora do computador (ex.: num bucket S3) e bloquear execuções simultâneas. |
+| **`init` / `plan` / `apply` / `destroy`** | Preparar a pasta / simular / executar / apagar tudo o que foi criado. |
+| **Idempotência** | Correr o mesmo código várias vezes dá sempre o mesmo resultado, sem duplicar nada. |
+| **Drift** | Diferença entre o código e a infraestrutura real (por exemplo, alterações feitas à mão). |
+| **`.terraform.lock.hcl`** | Fixa as versões exatas dos providers. Vai para o Git. |
+| **Bucket S3** | "Pasta" na cloud da AWS para guardar ficheiros. O nome é único no mundo inteiro. |
+| **Tags** | Etiquetas em recursos da cloud, úteis para organização e controlo de custos. |
+
 ## DevOps e QA (serão aprofundados nos passos seguintes)
 
 | Termo | Significado |
