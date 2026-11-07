@@ -309,7 +309,47 @@ O mapa de recursos da VPC mostra tudo ligado: cada sub-rede à sua tabela de rot
 
 ![Mapa de recursos da VPC](imagens/passo-03-vpc-mapa-de-recursos.png)
 
-### Parte E – Fecho (por fazer)
+### Parte E – Fecho ✅
+
+Esta parte não cria nada novo: verifica e arruma.
+
+**1. Formatar o código com `terraform fmt`.** Põe os ficheiros `.tf` no estilo padrão (alinhamento, espaços). Com `-recursive ..` aplica-se às três pastas de `infra/`. Imprime os ficheiros que alterou; aqui alterou só dois do exercício da Parte B (escritos à mão) e os restantes já estavam certos. É um hábito de equipa e a pipeline do Passo 4 vai verificá-lo.
+
+```bash
+terraform fmt -recursive ..
+```
+
+**2. Ver o que o Terraform gere com `terraform state list`.** Lista os recursos registados no state (o que está no bucket):
+
+```
+data.aws_availability_zones.disponiveis
+aws_internet_gateway.principal
+aws_route_table.privada
+aws_route_table.publica
+aws_route_table_association.privada[0]
+aws_route_table_association.privada[1]
+aws_route_table_association.publica[0]
+aws_route_table_association.publica[1]
+aws_subnet.privada[0]
+aws_subnet.privada[1]
+aws_subnet.publica[0]
+aws_subnet.publica[1]
+aws_vpc.principal
+```
+
+São 12 recursos e 1 data source (o primeiro, que só lê). Os `[0]` e `[1]` são as repetições do `count`.
+
+**3. Idempotência.** O `terraform plan` final deu:
+
+```
+No changes. Your infrastructure matches the configuration.
+```
+
+O código, o state (no bucket) e a infraestrutura real batem certo.
+
+**O que fica na conta AWS** (tudo sem custo relevante): o bucket do state, a VPC, 4 sub-redes, 1 internet gateway e 2 tabelas de rotas. Não há NAT Gateway, servidores nem EKS, por isso nada cobra por hora. Não se faz `destroy`: o Passo 5 vai usar esta rede.
+
+**Balanço do Passo 3:** aprendeu-se o ciclo `init`, `validate`, `plan`, `apply`, `destroy`; o state e o backend remoto; e a construir uma rede (VPC, sub-redes públicas e privadas, internet gateway e rotas) com código versionado.
 
 ---
 
@@ -332,8 +372,11 @@ O mapa de recursos da VPC mostra tudo ligado: cada sub-rede à sua tabela de rot
 | Parte D: `validate` e `plan` das sub-redes e rotas | ✅ | 2026-11-07 | 11 a criar, 0 a alterar, 0 a apagar |
 | Parte D: `apply` | ✅ | 2026-11-07 | 4 sub-redes, 1 internet gateway, 2 tabelas de rotas, 4 associações |
 | Parte D: print do mapa de recursos | ✅ | 2026-11-07 | `passo-03-vpc-mapa-de-recursos.png` |
-| Parte D: `plan` sem alterações (idempotência) | ☐ | | |
-| Parte D: commit e push | ☐ | | |
+| Parte D: `plan` sem alterações (idempotência) | ✅ | 2026-11-07 | No changes |
+| Parte D: commit e push | ✅ | 2026-11-07 | |
+| Parte E: `terraform fmt -recursive` | ✅ | 2026-11-07 | Alterou 2 ficheiros do exercício |
+| Parte E: `terraform state list` | ✅ | 2026-11-07 | 12 recursos e 1 data source |
+| Parte E: commit e push final do Passo 3 | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -384,3 +427,9 @@ Dá saída para a internet às sub-redes privadas, sem as expor. Cobra por hora,
 
 **O que faz o `count` no Terraform?**
 Repete um recurso várias vezes a partir de uma lista; `count.index` identifica cada repetição. Evita copiar o mesmo bloco.
+
+**Para que serve o `terraform fmt`?**
+Formata o código no estilo padrão do Terraform, para todos escreverem da mesma forma. Em equipas verifica-se na pipeline.
+
+**Para que serve o `terraform state list`?**
+Lista os recursos que o Terraform tem registados no state. É a forma segura de ver o que ele gere, sem abrir o ficheiro do state.

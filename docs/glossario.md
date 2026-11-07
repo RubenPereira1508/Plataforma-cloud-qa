@@ -105,6 +105,8 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **`prevent_destroy`** | Regra do Terraform que recusa apagar um recurso, mesmo com `destroy`. |
 | **`count`** | Repete um recurso várias vezes; `count.index` é o número da repetição. |
 | **Splat (`[*]`)** | Recolhe um atributo de todas as repetições de um `count` numa lista. |
+| **`fmt`** | Formata os ficheiros `.tf` no estilo padrão. |
+| **`state list`** | Lista os recursos registados no state, sem abrir o ficheiro. |
 | **`init` / `plan` / `apply` / `destroy`** | Preparar a pasta / simular / executar / apagar tudo o que foi criado. |
 | **Idempotência** | Correr o mesmo código várias vezes dá sempre o mesmo resultado, sem duplicar nada. |
 | **Drift** | Diferença entre o código e a infraestrutura real (por exemplo, alterações feitas à mão). |

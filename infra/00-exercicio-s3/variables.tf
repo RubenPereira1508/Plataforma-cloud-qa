@@ -10,5 +10,5 @@ variable "regiao" {
   description = "Região da AWS onde os recursos são criados."
   type        = string
   # Valor por omissão: a nossa região de trabalho. Lembra-te: usar SEMPRE a mesma.
-  default     = "eu-north-1"
+  default = "eu-north-1"
 }

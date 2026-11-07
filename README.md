@@ -40,7 +40,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 |---|---|---|
 | 01 | Conta AWS segura, repositório Git, IAM, orçamento e CLI | Concluído |
 | 02 | Docker e a aplicação da loja (local) | Concluído |
-| 03 | Terraform: estado remoto e rede (VPC) | Em curso (partes A a D feitas; falta E) |
+| 03 | Terraform: estado remoto e rede (VPC) | Concluído |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Por fazer |
 | 05 | Kubernetes e ArgoCD (GitOps) | Por fazer |
 | 06 | Observabilidade e segredos | Por fazer |

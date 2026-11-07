@@ -16,7 +16,7 @@ terraform {
   required_providers {
     # Provider da AWS: o "tradutor" que sabe criar recursos na AWS.
     aws = {
-      source  = "hashicorp/aws"
+      source = "hashicorp/aws"
       # "~> 6.0" significa: aceita 6.x (6.1, 6.2, ...) mas NÃO a 7.0.
       # Atualizações pequenas entram; mudanças grandes ficam de fora.
       version = "~> 6.0"
