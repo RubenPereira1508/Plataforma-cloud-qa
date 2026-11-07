@@ -1,11 +1,10 @@
 # =============================================================================
 # main.tf  (infra/02-rede)
 # -----------------------------------------------------------------------------
-# O QUE FAZ: cria a VPC, a rede privada do projeto dentro da AWS.
+# O QUE FAZ: configura o provider e cria a VPC, a rede privada do projeto.
 # PORQUÊ: tudo o que vem a seguir (servidores, Kubernetes, bases de dados)
 #         vive dentro de uma rede. A VPC é gratuita.
-# NOTA: por agora só criamos a VPC. As sub-redes, o internet gateway e as
-#       rotas ficam para a Parte D.
+# NOTA: as sub-redes, o internet gateway e as rotas estão no ficheiro rede.tf.
 # =============================================================================
 
 provider "aws" {

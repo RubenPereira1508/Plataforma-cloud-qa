@@ -222,7 +222,7 @@ No `git status` confirma que **não** aparecem a pasta `.terraform/` nem ficheir
 | Pasta | O que cria | Onde fica o state |
 |---|---|---|
 | `infra/01-estado-remoto` | Só o bucket do state | Local (não pode ficar num bucket que ainda não existe) |
-| `infra/02-rede` | A VPC (rede privada, gratuita) | No bucket, em `rede/terraform.tfstate` |
+| `infra/02-rede` | A VPC (rede privada, gratuita) | O state fica no bucket, em `rede/terraform.tfstate` |
 
 **O bucket do state** (`infra/01-estado-remoto`) tem proteções que o bucket de teste não tinha:
 
@@ -268,7 +268,46 @@ A VPC criada pelo Terraform, vista na consola AWS (a outra, sem nome, é a VPC p
 
 > **Nota:** o state da pasta `01-estado-remoto` continua local. É aceite, porque essa pasta quase nunca muda. Não se apaga o ficheiro `terraform.tfstate` dessa pasta.
 
-### Parte D – Rede: sub-redes, internet gateway e rotas (por fazer)
+### Parte D – Rede: sub-redes, internet gateway e rotas ✅
+
+**A ideia:** a VPC, sozinha, é um terreno vedado e vazio. Falta dividi-lo em lotes (sub-redes), abrir um portão para a rua (internet gateway) e pôr as placas que dizem por onde se vai (rotas). Tudo isto está em `infra/02-rede/rede.tf` e é **gratuito**.
+
+**Sub-redes.** Pedaços do intervalo `10.0.0.0/16`. Criámos 4, todas `/24` (256 endereços; a AWS reserva 5, ficam 251 utilizáveis), repartidas por duas zonas de disponibilidade para a rede resistir à falha de um centro de dados:
+
+| Sub-rede | Intervalo | Zona |
+|---|---|---|
+| pública 1 | `10.0.0.0/24` | `eu-north-1a` |
+| pública 2 | `10.0.1.0/24` | `eu-north-1b` |
+| privada 1 | `10.0.10.0/24` | `eu-north-1a` |
+| privada 2 | `10.0.11.0/24` | `eu-north-1b` |
+
+**O que torna uma sub-rede pública?** Não é o nome nem uma opção: é a **rota**. Uma sub-rede é pública quando a sua tabela de rotas tem a regra `0.0.0.0/0` (qualquer destino) a apontar para o internet gateway. A privada não tem essa regra, por isso só comunica dentro da VPC.
+
+| | Pública | Privada |
+|---|---|---|
+| Rota para o internet gateway | Sim | Não |
+| IP público automático | Sim | Não |
+| Para quê | Balanceadores, o que é exposto | Bases de dados, o que é interno |
+
+**As peças do `rede.tf`:**
+
+| Peça | O que faz |
+|---|---|
+| `data "aws_availability_zones"` | Consulta a AWS para saber que zonas existem, em vez de as escrever à mão |
+| `count` e `count.index` | Repetem um recurso uma vez por elemento da lista; o índice escolhe o intervalo e a zona de cada repetição |
+| `aws_subnet` | As sub-redes (públicas com `map_public_ip_on_launch = true`, privadas com `false`) |
+| `aws_internet_gateway` | A porta da VPC para a internet; sozinha não chega, é preciso uma rota |
+| `aws_route_table` | A lista de "para onde vai o tráfego"; a pública tem `0.0.0.0/0` para o gateway |
+| `aws_route_table_association` | Liga cada sub-rede à sua tabela; uma tabela só vale para as sub-redes associadas |
+| Etiquetas `kubernetes.io/role/...` | Dizem ao Kubernetes na AWS onde pôr balanceadores; ficam prontas para o Passo 5 |
+
+**Sem NAT Gateway.** Uma sub-rede privada que precise de sair para a internet usa normalmente um NAT Gateway, que cobra por hora. Como o projeto usa o kind local e o EKS só em sessões curtas, não o criámos. Consequência: as sub-redes privadas não têm saída para a internet. Resolve-se no Passo 5, quando for preciso.
+
+**Resultado:** o plano deu `11 to add, 0 to change, 0 to destroy` e o `apply` criou 4 sub-redes, 1 internet gateway, 2 tabelas de rotas e 4 associações. O state continuou a ser guardado no bucket.
+
+O mapa de recursos da VPC mostra tudo ligado: cada sub-rede à sua tabela de rotas e a tabela pública ao internet gateway. A terceira tabela de rotas (`rtb-...`, sem nome) é a tabela principal que a AWS cria sozinha com a VPC; não é nossa e não é usada.
+
+![Mapa de recursos da VPC](imagens/passo-03-vpc-mapa-de-recursos.png)
 
 ### Parte E – Fecho (por fazer)
 
@@ -288,8 +327,13 @@ A VPC criada pelo Terraform, vista na consola AWS (a outra, sem nome, é a VPC p
 | Parte C: bucket do state criado (`01-estado-remoto`) | ✅ | 2026-11-06 | Versionamento e encriptação ativos |
 | Parte C: backend S3 configurado e VPC criada (`02-rede`) | ✅ | 2026-11-06 | State em `rede/terraform.tfstate` |
 | Parte C: `plan` sem alterações com state remoto | ✅ | 2026-11-06 | |
-| Parte C: print da VPC na consola | ☐ | | `passo-03-vpc-consola.png` |
-| Parte C: commit e push | ☐ | | |
+| Parte C: print da VPC na consola | ✅ | 2026-11-06 | `passo-03-vpc-consola.png` |
+| Parte C: commit e push | ✅ | 2026-11-06 | |
+| Parte D: `validate` e `plan` das sub-redes e rotas | ✅ | 2026-11-07 | 11 a criar, 0 a alterar, 0 a apagar |
+| Parte D: `apply` | ✅ | 2026-11-07 | 4 sub-redes, 1 internet gateway, 2 tabelas de rotas, 4 associações |
+| Parte D: print do mapa de recursos | ✅ | 2026-11-07 | `passo-03-vpc-mapa-de-recursos.png` |
+| Parte D: `plan` sem alterações (idempotência) | ☐ | | |
+| Parte D: commit e push | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -325,3 +369,18 @@ Versionamento (para recuperar versões antigas), encriptação, acesso público 
 
 **O que faz o bloqueio do state (`use_lockfile`)?**
 Impede que dois `apply` corram ao mesmo tempo sobre o mesmo state e o corrompam. Desde o Terraform 1.10 o S3 faz isto sozinho, sem tabela DynamoDB.
+
+**O que torna uma sub-rede pública?**
+A tabela de rotas associada: se tiver uma rota `0.0.0.0/0` para um internet gateway, a sub-rede é pública. Sem essa rota, é privada.
+
+**Para que serve um internet gateway e porque não chega só criá-lo?**
+É a porta da VPC para a internet. Só funciona se uma tabela de rotas apontar para ele e essa tabela estiver associada às sub-redes.
+
+**Porque se usam duas zonas de disponibilidade?**
+Para a rede e as aplicações continuarem a funcionar se um centro de dados falhar.
+
+**O que é um NAT Gateway e porque não o usaste?**
+Dá saída para a internet às sub-redes privadas, sem as expor. Cobra por hora, por isso evitei-o para controlar o custo; as sub-redes privadas ficaram sem saída para a internet.
+
+**O que faz o `count` no Terraform?**
+Repete um recurso várias vezes a partir de uma lista; `count.index` identifica cada repetição. Evita copiar o mesmo bloco.

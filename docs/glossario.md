@@ -18,6 +18,14 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Utilizador IAM** | Identidade para o trabalho diário, com permissões limitadas. |
 | **Papel (Role)** | Conjunto de permissões que pode ser assumido temporariamente por pessoas ou serviços. Alguns são criados pela AWS (os `AWSServiceRole...`). |
 | **Política (Policy)** | Documento JSON que define permissões (permitir ou negar ações em recursos). |
+| **VPC** | *Virtual Private Cloud*. Rede privada e isolada dentro da AWS onde vivem os teus recursos. Gratuita. |
+| **CIDR** | Forma de escrever um intervalo de endereços IP (ex.: `10.0.0.0/16`). O número depois da barra diz quantos endereços há: `/16` são 65 536, `/24` são 256. |
+| **Sub-rede (subnet)** | Pedaço do intervalo da VPC, numa única zona de disponibilidade. |
+| **Sub-rede pública / privada** | Pública: a sua tabela de rotas envia o tráfego para um internet gateway. Privada: não tem rota para a internet. |
+| **Internet Gateway** | Porta da VPC para a internet. Gratuito. |
+| **Tabela de rotas** | Lista de regras que diz para onde vai o tráfego de uma sub-rede. A regra `0.0.0.0/0` significa "qualquer destino". |
+| **NAT Gateway** | Dá saída para a internet às sub-redes privadas sem as expor. Cobra por hora; não é usado neste projeto. |
+| **VPC por omissão** | VPC que a AWS cria sozinha em cada região. Não é gerida pelo Terraform e não se usa neste projeto. |
 | **Menor privilégio** | Princípio de dar apenas as permissões estritamente necessárias. |
 | **ARN** | *Amazon Resource Name*. Identificador único de um recurso na AWS. |
 | **AWS CLI** | Ferramenta de linha de comandos para usar a AWS. |
@@ -91,6 +99,12 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Module** | Conjunto de recursos reutilizável. |
 | **State** | Ficheiro onde o Terraform regista o que criou. Pode ter dados sensíveis; não vai para o Git. |
 | **Estado remoto e lock** | Guardar o state fora do computador (ex.: num bucket S3) e bloquear execuções simultâneas. |
+| **Backend** | Bloco que diz ao Terraform onde guardar o state (ex.: `backend "s3"`). Não aceita variáveis. |
+| **Bloqueio do state (`use_lockfile`)** | O S3 impede dois `apply` simultâneos sobre o mesmo state. Desde o Terraform 1.10 dispensa a tabela DynamoDB. |
+| **Versionamento (do bucket)** | O S3 guarda as versões antigas de cada ficheiro. É o que permite recuperar um state anterior. |
+| **`prevent_destroy`** | Regra do Terraform que recusa apagar um recurso, mesmo com `destroy`. |
+| **`count`** | Repete um recurso várias vezes; `count.index` é o número da repetição. |
+| **Splat (`[*]`)** | Recolhe um atributo de todas as repetições de um `count` numa lista. |
 | **`init` / `plan` / `apply` / `destroy`** | Preparar a pasta / simular / executar / apagar tudo o que foi criado. |
 | **Idempotência** | Correr o mesmo código várias vezes dá sempre o mesmo resultado, sem duplicar nada. |
 | **Drift** | Diferença entre o código e a infraestrutura real (por exemplo, alterações feitas à mão). |
