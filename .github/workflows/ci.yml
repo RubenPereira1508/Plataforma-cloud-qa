@@ -1,0 +1,85 @@
+# =============================================================================
+# ci.yml  (.github/workflows)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: pipeline de integração contínua (CI). A cada push e a cada pull
+#            request, o GitHub arranca uma máquina e verifica o código
+#            Terraform: está bem formatado? Está válido?
+# PORQUÊ: apanhar erros automaticamente, antes de chegarem à infraestrutura,
+#         sem depender de alguém se lembrar de correr os comandos à mão.
+#
+# NOTA: esta pipeline NÃO precisa de credenciais da AWS. Só lê o código.
+#       A ligação segura à AWS (OIDC) fica para uma parte posterior do Passo 4.
+# =============================================================================
+
+# Nome que aparece no separador "Actions" do GitHub.
+name: CI
+
+# --- Quando corre ------------------------------------------------------------
+on:
+  push:
+    branches: [main] # a cada push para a branch principal
+  pull_request: # e a cada pull request (a verificar antes de juntar)
+
+# --- Permissões --------------------------------------------------------------
+# Princípio do menor privilégio, outra vez: o workflow só pode LER o
+# repositório. Se um passo for comprometido, não consegue escrever nada.
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1: verificar o formato do código Terraform
+  # ---------------------------------------------------------------------------
+  formato-terraform:
+    name: Terraform – formato
+    runs-on: ubuntu-latest # a máquina (runner) que o GitHub empresta
+
+    steps:
+      # Descarrega o código do repositório para a máquina.
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      # Instala o Terraform na máquina. Fixamos a mesma versão que usamos
+      # localmente, para o resultado ser igual.
+      - name: Instalar o Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.6"
+
+      # "-check" não altera nada: só falha se houver ficheiros mal formatados.
+      # "-diff" mostra o que mudaria, para perceberes o que está errado.
+      - name: Verificar formato (terraform fmt)
+        run: terraform fmt -check -recursive -diff infra
+
+  # ---------------------------------------------------------------------------
+  # JOB 2: validar cada pasta do Terraform
+  # ---------------------------------------------------------------------------
+  validar-terraform:
+    name: Terraform – validar (${{ matrix.pasta }})
+    runs-on: ubuntu-latest
+
+    # MATRIX: o mesmo job corre uma vez por cada valor da lista, em paralelo.
+    # Em vez de copiar o job três vezes, escrevemo-lo uma vez.
+    strategy:
+      fail-fast: false # se uma pasta falhar, as outras continuam a correr
+      matrix:
+        pasta: [00-exercicio-s3, 01-estado-remoto, 02-rede]
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.6"
+
+      # "-backend=false": não liga ao bucket do state. Assim o init não precisa
+      # de credenciais da AWS; só descarrega os providers.
+      - name: Inicializar (sem backend)
+        working-directory: infra/${{ matrix.pasta }}
+        run: terraform init -backend=false -input=false
+
+      - name: Validar
+        working-directory: infra/${{ matrix.pasta }}
+        run: terraform validate

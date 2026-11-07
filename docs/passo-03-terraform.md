@@ -5,10 +5,10 @@
 **Partes deste passo:**
 
 - A. Teoria e instalação do Terraform ✅
-- B. Primeiro recurso: um bucket S3 de teste
-- C. Estado remoto (bucket S3 para o *state*) (por fazer)
-- D. Rede: VPC, sub-redes e internet gateway (por fazer)
-- E. Fecho: outputs, destroy, documentação e commit (por fazer)
+- B. Primeiro recurso: um bucket S3 de teste ✅
+- C. Estado remoto (bucket S3 para o *state*) ✅
+- D. Rede: VPC, sub-redes e internet gateway ✅
+- E. Fecho: formato, verificação do state e commit ✅
 
 ---
 

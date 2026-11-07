@@ -122,3 +122,11 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **CI/CD** | Integração e entrega contínuas. Automatizar build, testes e deploy. |
 | **GitOps** | Usar o Git como fonte de verdade do estado desejado da infraestrutura e das aplicações. |
 | **Quality gate** | Critério automático que bloqueia a entrega se a qualidade não for suficiente (ex.: testes a falhar). |
+| **Pipeline** | Sequência automática de verificações e ações que corre a cada alteração ao código. |
+| **GitHub Actions** | Serviço do GitHub que corre pipelines descritas em ficheiros `.yml` em `.github/workflows/`. |
+| **Workflow** | Ficheiro `.yml` que descreve uma pipeline: quando corre e o que faz. |
+| **Job / Step** | Job: grupo de passos que corre numa máquina (jobs diferentes correm em paralelo). Step: um passo individual. |
+| **Runner** | Máquina temporária que o GitHub arranca para correr um job. |
+| **Action** | Passo reutilizável feito por outros (ex.: `actions/checkout`). |
+| **Matrix** | Corre o mesmo job várias vezes com valores diferentes, sem copiar código. |
+| **Secret (do GitHub)** | Valor sensível guardado no GitHub que não aparece nos logs. |
