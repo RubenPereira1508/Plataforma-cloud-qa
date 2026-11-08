@@ -43,7 +43,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 03 | Terraform: estado remoto e rede (VPC) | Concluído |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Em curso (pipeline escrita; bloqueada por um problema de faturação da conta GitHub, a aguardar o suporte) |
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
-| 06 | Observabilidade e segredos | Por fazer |
+| 06 | Segredos e observabilidade | Em curso (parte A concluída: Sealed Secrets; B por fazer) |
 | 07 | Estratégia de testes e testes de API | Por fazer |
 | 08 | Contract testing, E2E, performance e quality gates | Por fazer |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |
@@ -83,4 +83,5 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-08 | Repositório passa a público | O ArgoCD lê-o sem credenciais, o GitHub Actions é gratuito em repositórios públicos e o portfolio tem de ser visível. Antes foram pesquisados segredos no histórico e o `.env` está fora do Git |
 | 2026-11-08 | Avançar com o Passo 5 enquanto a pipeline do Passo 4 está bloqueada | O bloqueio é da faturação da conta GitHub (pedido enviado ao suporte); o Kubernetes local não depende do GitHub Actions e o calendário aponta para o fim de novembro |
 | 2026-11-08 | Manter o Secret da base de dados fora do Git e criá-lo à mão até ao Passo 6 | Uma palavra-passe num YAML do repositório ficaria exposta (agora público); a gestão de segredos a sério fica para o Passo 6 |
+| 2026-11-08 | Sealed Secrets para guardar segredos no Git, com o controlador instalado pelo ArgoCD | Mantém o GitOps completo (o Git descreve tudo) com o repositório público; a chave privada nunca sai do cluster |
 | 2026-11-08 | Cluster kind de um único nó, com a porta 8081 do computador ligada à 30080 do nó | Poupa memória no portátil; a 8081 não colide com a 8080 do Docker Compose |
