@@ -1,0 +1,164 @@
+# =============================================================================
+# 10-db.yaml  (k8s/loja)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: põe a base de dados PostgreSQL no cluster. Tem 3 recursos:
+#   1. PersistentVolumeClaim: o "pedido de disco" para os dados
+#   2. Deployment: corre o contentor do Postgres
+#   3. Service: dá-lhe o endereço "db" dentro do namespace
+# PORQUÊ: é o equivalente ao serviço "db" + volume "dados-postgres" do
+#         docker-compose.yml.
+#
+# O Secret "db-credenciais" NÃO está aqui de propósito: palavras-passe nunca
+# entram no Git. Cria-se à mão (ver doc do Passo 5, Parte B).
+# =============================================================================
+
+# --- 1. O disco -------------------------------------------------------------
+# Um Pod pode ser apagado e recriado a qualquer momento; o que está dentro
+# dele perde-se. Os dados da base de dados ficam num PersistentVolumeClaim
+# (PVC), que sobrevive aos Pods. É o equivalente ao "volume" do Docker.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dados-postgres
+  namespace: loja
+spec:
+  # ReadWriteOnce: o disco só pode ser usado por um nó de cada vez.
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+  # Não indicamos storageClassName: usa a classe por omissão do cluster.
+  # No kind é o "local-path" (instalado pelo local-path-provisioner), que
+  # guarda os dados numa pasta do nó.
+---
+# --- 2. O contentor do Postgres ---------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: loja
+  labels:
+    app: db
+spec:
+  # Uma só cópia: bases de dados não se multiplicam assim. (Em produção usa-se
+  # um StatefulSet ou um serviço gerido, como o RDS da AWS.)
+  replicas: 1
+
+  # Recreate: quando se atualiza, apaga o Pod antigo ANTES de criar o novo.
+  # PORQUÊ: dois Postgres a escrever no mesmo disco ao mesmo tempo
+  # estragavam os dados. (O padrão, RollingUpdate, criaria o novo primeiro.)
+  strategy:
+    type: Recreate
+
+  # O Deployment "adota" os Pods que tiverem esta etiqueta.
+  selector:
+    matchLabels:
+      app: db
+
+  # O molde dos Pods que o Deployment cria.
+  template:
+    metadata:
+      labels:
+        app: db # tem de coincidir com o selector acima
+    spec:
+      containers:
+        - name: db
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+
+          # --- Sondas (Parte C) ------------------------------------------
+          # O Postgres não tem endereço HTTP; usamos "exec": o Kubernetes
+          # corre um comando DENTRO do contentor. pg_isready sai com sucesso
+          # se o Postgres já aceita ligações. É isto que faltava na Parte B:
+          # o Pod aparecia "Running" em 4 s, antes de a base estar pronta.
+          # As variáveis vêm do próprio contentor (as do Secret).
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            # Mais espera e menos frequência: reiniciar uma base de dados
+            # por engano é caro (recuperação de dados).
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
+
+          # Recursos (ver explicação no 20-api.yaml). A base de dados é a
+          # peça mais pesada da loja.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          # NOTA DE SEGURANÇA: aqui NÃO impomos "runAsNonRoot". A imagem do
+          # Postgres arranca como root só para preparar a pasta de dados e
+          # depois passa para o utilizador "postgres"; forçar não-root podia
+          # impedi-lo de arrancar. É uma exceção conhecida e consciente.
+
+          # As credenciais vêm do Secret, e não escritas aqui.
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credenciais
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credenciais
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credenciais
+                  key: POSTGRES_DB
+            # Os dados ficam numa subpasta do volume. PORQUÊ: alguns discos
+            # trazem ficheiros na raiz e o Postgres recusa-se a arrancar
+            # numa pasta que não esteja vazia.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+
+          # Liga o disco (volume "dados", definido em baixo) à pasta onde o
+          # Postgres guarda os dados.
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+
+      volumes:
+        - name: dados
+          persistentVolumeClaim:
+            claimName: dados-postgres
+---
+# --- 3. O endereço ----------------------------------------------------------
+# Os Pods mudam de IP sempre que são recriados. O Service dá um nome fixo
+# ("db") e reparte o tráfego pelos Pods com a etiqueta app: db.
+# É por isto que a API continua a ligar-se a "...@db:5432/..." como no Compose.
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: loja
+spec:
+  # ClusterIP (o padrão): só acessível de dentro do cluster. A base de dados
+  # nunca deve ficar exposta ao exterior.
+  type: ClusterIP
+  selector:
+    app: db
+  ports:
+    - port: 5432 # porta do Service
+      targetPort: 5432 # porta do contentor

@@ -131,6 +131,12 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **ConfigMap / Secret** | Configuração não sensível / valores sensíveis (palavras-passe) usados pelos Pods. |
 | **Manifest** | Ficheiro YAML que descreve um recurso do Kubernetes. |
 | **Probe (sonda)** | Verificação de saúde. *Liveness*: se falhar, reinicia o contentor. *Readiness*: se falhar, deixa de receber tráfego. |
+| **Sonda `exec`** | Sonda que corre um comando dentro do contentor (ex.: `pg_isready` no Postgres) em vez de um pedido HTTP. |
+| **requests / limits** | Recursos mínimos garantidos a um contentor / máximo que pode usar (CPU e memória). |
+| **OOMKilled** | Contentor morto por ter ultrapassado o limite de memória. |
+| **millicore (`m`)** | Unidade de CPU: `100m` = 0,1 de um núcleo. |
+| **securityContext** | Regras de segurança de um Pod ou contentor (utilizador, capacidades, escalada de privilégios). |
+| **Menor privilégio** | Dar a cada componente só os poderes de que precisa. |
 | **kubectl** | Ferramenta de linha de comandos para falar com um cluster Kubernetes. |
 | **Contexto (kubectl)** | O cluster para onde o kubectl envia os comandos neste momento. |
 | **kind** | *Kubernetes in Docker*: cria clusters Kubernetes locais em que cada nó é um contentor Docker. |

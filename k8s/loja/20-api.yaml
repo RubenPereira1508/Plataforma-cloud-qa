@@ -1,0 +1,136 @@
+# =============================================================================
+# 20-api.yaml  (k8s/loja)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: põe a API (FastAPI) no cluster: um Deployment e um Service.
+# PORQUÊ: equivalente ao serviço "api" do docker-compose.yml.
+#
+# A imagem "loja-api:0.1" é construída no teu computador e carregada para
+# dentro do cluster com "kind load" (ver doc do Passo 5, Parte B). Não está
+# em nenhum registo (ECR/Docker Hub); isso vem com a pipeline, no Passo 4.
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: loja
+  labels:
+    app: api
+spec:
+  # Começamos com 1 cópia. Mais tarde, na Parte B, escalamos para ver o
+  # Kubernetes a repartir pedidos.
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: api
+
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: loja-api:0.1
+
+          # IfNotPresent: usa a imagem que já está no nó e só tenta
+          # descarregá-la se não existir. É OBRIGATÓRIO aqui, porque a imagem
+          # não existe em nenhum registo. (Com a etiqueta ":latest" o padrão
+          # seria "Always" e falharia; por isso usamos uma versão fixa, 0.1.)
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8000
+
+          # --- Sondas de saúde (Parte C) ---------------------------------
+          # O Kubernetes só sabe que o contentor ARRANCOU. Estas sondas
+          # ensinam-no a perguntar à própria aplicação como está.
+          #
+          # READINESS ("estás pronta a receber pedidos?"): chama /pronto, que
+          # testa a ligação à base de dados. Se falhar, o Pod fica "0/1
+          # Ready" e o Service deixa de lhe enviar pedidos. NÃO reinicia.
+          readinessProbe:
+            httpGet:
+              path: /pronto
+              port: 8000
+            initialDelaySeconds: 3 # espera 3 s antes da primeira pergunta
+            periodSeconds: 5 # pergunta de 5 em 5 s
+            timeoutSeconds: 2 # sem resposta em 2 s conta como falha
+            failureThreshold: 3 # 3 falhas seguidas = "não pronto"
+          # LIVENESS ("estás viva?"): chama /saude, que NÃO depende da base de
+          # dados. Se falhar várias vezes, o Kubernetes reinicia o contentor.
+          # PORQUÊ separada: se a DB cair, reiniciar a API não ajuda nada;
+          # só a tiramos do tráfego (readiness) até a DB voltar.
+          livenessProbe:
+            httpGet:
+              path: /saude
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          # --- Recursos (Parte C) ----------------------------------------
+          # requests: o mínimo GARANTIDO; o scheduler usa-o para escolher o
+          #           nó onde o Pod cabe.
+          # limits:   o máximo PERMITIDO. Passar o limite de memória mata o
+          #           contentor (OOMKilled); passar o de CPU só o abranda.
+          # PORQUÊ: sem isto, um Pod com um erro podia consumir a máquina toda.
+          # (100m = 0,1 de um núcleo de CPU; Mi = mebibytes de memória.)
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+
+          # --- Segurança (Parte C) ---------------------------------------
+          # O Dockerfile já usa o utilizador "appuser" (UID 1001). Aqui o
+          # Kubernetes passa a EXIGI-LO e fecha mais portas.
+          securityContext:
+            runAsNonRoot: true # recusa arrancar se for root
+            runAsUser: 1001 # UID numérico (o Kubernetes não valida nomes)
+            allowPrivilegeEscalation: false # o processo não ganha mais poderes
+            capabilities:
+              drop: ["ALL"] # retira todas as capacidades especiais do Linux
+            seccompProfile:
+              type: RuntimeDefault # filtra chamadas perigosas ao sistema
+
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credenciais
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credenciais
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credenciais
+                  key: POSTGRES_DB
+            # $(NOME) insere o valor de uma variável definida ACIMA na lista.
+            # O endereço é "db" (o nome do Service da base de dados), tal
+            # como no Docker Compose.
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
+---
+# O nome do Service é "api" de propósito: o nginx do frontend está configurado
+# com "proxy_pass http://api:8000/", por isso funciona sem mexer em nada.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: loja
+spec:
+  type: ClusterIP
+  selector:
+    app: api
+  ports:
+    - port: 8000
+      targetPort: 8000

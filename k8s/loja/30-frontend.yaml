@@ -1,0 +1,92 @@
+# =============================================================================
+# 30-frontend.yaml  (k8s/loja)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: põe o frontend (nginx) no cluster e expõe-no ao teu computador.
+# PORQUÊ: equivalente ao serviço "frontend" do docker-compose.yml.
+#
+# Cadeia completa para chegares à loja no browser:
+#   http://localhost:8081  -->  porta 30080 do nó (kind-cluster.yaml)
+#     -->  Service "frontend" (NodePort 30080)  -->  Pod do nginx (porta 8080)
+#     -->  /api/ é reenviado para o Service "api"  -->  Pod da API
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: loja
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: loja-frontend:0.1
+          imagePullPolicy: IfNotPresent # ver explicação no 20-api.yaml
+          ports:
+            # O nginx "sem privilégios" ouve na 8080 (não na 80).
+            - containerPort: 8080
+
+          # Sondas (ver explicação completa no 20-api.yaml). O nginx tem o
+          # endereço /healthz, que responde "ok" sem depender de mais nada.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          # O nginx é leve: pedimos pouco e limitamos cedo.
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+
+          # A imagem nginx-unprivileged corre com o UID 101.
+          # Não ativamos "readOnlyRootFilesystem" porque o nginx escreve
+          # ficheiros temporários; ficaria para uma melhoria futura.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: loja
+spec:
+  # NodePort: abre uma porta fixa em cada nó do cluster. É a forma mais
+  # simples de chegar a um Pod a partir de fora, e combina com a ligação de
+  # portas que fizemos no kind (8081 -> 30080).
+  # Em produção usaríamos um Ingress ou um balanceador de carga.
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - port: 8080 # porta do Service (dentro do cluster)
+      targetPort: 8080 # porta do contentor
+      nodePort: 30080 # porta aberta no nó (intervalo 30000-32767)

@@ -1,0 +1,19 @@
+# =============================================================================
+# 00-namespace.yaml  (k8s/loja)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: cria o namespace "loja", a "pasta" onde vai viver a aplicação.
+# PORQUÊ: separar a nossa aplicação do resto do cluster (kube-system, argocd,
+#         etc.). Dentro de um namespace, os nomes dos Services funcionam como
+#         hostnames ("api", "db"), tal como no Docker Compose.
+#
+# O prefixo "00-" garante que este ficheiro vem primeiro quando se aplica a
+# pasta toda (o kubectl lê os ficheiros por ordem alfabética).
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loja
+  labels:
+    # Etiqueta informativa: a que projeto isto pertence.
+    app.kubernetes.io/part-of: plataforma-cloud-qa
