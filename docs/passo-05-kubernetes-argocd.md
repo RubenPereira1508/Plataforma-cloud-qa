@@ -7,7 +7,7 @@
 - A. Teoria, instalação do kind e do kubectl, e criar o cluster ✅
 - B. Pôr a aplicação no cluster: namespace, Deployments e Services ✅
 - C. Sondas de saúde, limites de recursos e segurança dos contentores ✅
-- D. ArgoCD: GitOps a vigiar a pasta `k8s/` (por fazer)
+- D. ArgoCD: GitOps a vigiar a pasta `k8s/loja/` (em curso)
 - E. Fecho: documentação, limpeza e commit (por fazer)
 
 ---
@@ -441,7 +441,110 @@ Isto prova a diferença entre as duas sondas: a readiness (`/pronto`, depende da
 
 **Prints desta parte:** nenhum é necessário. Tudo o que importa é texto do terminal e vai para o doc como texto (cola-me o `get pods` da experiência 5, com a API a `0/1` e `RESTARTS 0`).
 
-### Parte D – ArgoCD: GitOps (por fazer)
+### Parte D – ArgoCD: GitOps (em curso)
+
+**O que é GitOps.** Até agora, para alterar a loja corrias `kubectl apply` no teu computador. O problema: o que está no cluster pode ficar diferente do que está no Git, e ninguém sabe quem mudou o quê. Em GitOps, o **Git é a única fonte da verdade** e uma ferramenta dentro do cluster, o **ArgoCD**, compara continuamente a pasta `k8s/loja/` do GitHub com o que existe no cluster e corrige as diferenças. Para alterar a loja, fazes `git push`. Não há `kubectl apply`.
+
+Isto dá três vantagens: cada alteração fica no histórico do Git (quem, quando, porquê); voltar atrás é um `git revert`; e alterações feitas à mão no cluster são desfeitas automaticamente.
+
+**Como o ArgoCD funciona:**
+
+- Instala-se **dentro** do cluster, no namespace `argocd`, como mais uma aplicação (vários Pods).
+- Cria um tipo novo de recurso, a **Application**, que diz "vigia este repositório, esta pasta, e aplica neste namespace".
+- Compara o Git (estado desejado) com o cluster (estado real). Se são iguais, o estado é `Synced`. Se diferem, é `OutOfSync` e ele sincroniza.
+- Não precisa de credenciais porque o repositório é **público** (decisão de 2026-11-08).
+
+**0. Antes de começar: repositório público.** Tudo o que está no Git é agora visível a qualquer pessoa. Já pesquisámos chaves AWS e não apareceu nada, e o `.env` está fora do Git. Falta rever as **imagens** em `docs/imagens/`: abre cada uma e confirma que não mostra o ID da conta AWS, o teu email, ou a barra de favoritos com nomes pessoais. Se mostrar, corta ou repete o print.
+
+**1. Instalar o ArgoCD** (cria o namespace e aplica os manifests oficiais):
+
+```powershell
+kubectl create namespace argocd
+kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl get pods -n argocd -w
+```
+
+O `--server-side` é necessário porque alguns recursos do ArgoCD são grandes demais para o `apply` normal. Espera até todos os Pods estarem `1/1 Running` (cerca de 1 a 2 minutos) e sai com `Ctrl+C`. **Aviso:** o ArgoCD usa cerca de 1 GB de memória. Se o portátil ficar lento, fecha o Docker Compose e outras aplicações.
+
+**2. Obter a palavra-passe inicial do utilizador `admin`:**
+
+```powershell
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}")))
+```
+
+O Secret guarda-a em base64 (que não é encriptação) e o comando descodifica-a. **Não a cole no chat nem em prints.** Guarda-a só para ti.
+
+**3. Abrir a interface web.** O ArgoCD não está exposto ao exterior. O `port-forward` liga uma porta do teu computador ao Service dentro do cluster, enquanto o comando estiver a correr:
+
+```powershell
+kubectl port-forward svc/argocd-server -n argocd 8082:443
+```
+
+Deixa este terminal aberto e abre outro. No browser vai a `https://localhost:8082`. Vai aparecer um aviso de certificado (o ArgoCD usa um certificado que ele próprio gerou): escolhe "Avançadas" e continua. Entra com o utilizador `admin` e a palavra-passe do passo 2.
+
+**4. Dizer ao ArgoCD o que vigiar.** O ficheiro `k8s/argocd/aplicacao-loja.yaml` define a Application (está todo comentado). Aplica-o uma única vez:
+
+```powershell
+kubectl apply -f k8s/argocd/aplicacao-loja.yaml
+kubectl get applications -n argocd
+```
+
+Esperado: a aplicação `loja` aparece com `SYNC STATUS` `Synced` e `HEALTH STATUS` `Healthy`. Na interface web, clica na aplicação `loja` e vês o desenho dos recursos (Deployments, Services, Pods) todos a verde. O ArgoCD "adotou" a loja que já estava a correr, porque os manifests no Git são iguais ao que já estava no cluster.
+
+**5. Experiência A: uma alteração por Git.** Muda `replicas: 1` para `replicas: 2` no `k8s/loja/30-frontend.yaml`, faz commit e push:
+
+```powershell
+git add k8s/loja/30-frontend.yaml
+git commit -m "Frontend com 2 réplicas (teste GitOps)"
+git push
+kubectl get pods -n loja -w
+```
+
+O ArgoCD verifica o repositório de 3 em 3 minutos. Para não esperar, na interface clica em **Refresh** na aplicação. Vais ver aparecer um segundo Pod `frontend`, sem teres corrido `kubectl apply`. Depois **volta a pôr 1**, com outro commit e push.
+
+**6. Experiência B: alteração à mão desfeita (self-heal).**
+
+```powershell
+kubectl scale deployment frontend -n loja --replicas=5
+kubectl get pods -n loja -w
+```
+
+Vais ver Pods a nascer e, passado pouco tempo, o ArgoCD volta a pôr o número que está no Git e os Pods a mais desaparecem. Isto é o `selfHeal: true` do ficheiro.
+
+**Resultados (2026-11-08):**
+
+*Instalação.* O `apply --server-side` aplicou os 3 CRDs, as permissões e os 7 componentes sem erros. Os Pods passaram por `ContainerCreating` e `Init:0/1` (a descarregar imagens) e, ao fim de cerca de 50 s, estavam todos `1/1 Running`. O `argocd-repo-server` e o `argocd-server` demoraram mais a ficar prontos, por causa da readiness. Versão: ArgoCD 3.6.1.
+
+```text
+argocd-application-controller-0                     1/1     Running   0          53s
+argocd-applicationset-controller-794bb95c9d-slccr   1/1     Running   0          53s
+argocd-dex-server-66cf64bfcf-fd85v                  1/1     Running   0          53s
+argocd-notifications-controller-5878c8d644-7fxgh    1/1     Running   0          53s
+argocd-redis-5869b7547-m9mtg                        1/1     Running   0          53s
+argocd-repo-server-7d55cc466b-jzxjs                 1/1     Running   0          53s
+argocd-server-85b849c688-s7phs                      1/1     Running   0          53s
+```
+
+*Application `loja`.* Depois de `kubectl apply -f k8s/argocd/aplicacao-loja.yaml`, o ArgoCD leu `k8s/loja/` do GitHub, comparou com o namespace `loja` e verificou que eram iguais, por isso adotou a loja sem recriar nada:
+
+```text
+application.argoproj.io/loja created
+NAME   SYNC STATUS   HEALTH STATUS
+loja   Synced        Healthy
+```
+
+Na árvore da interface vê-se o namespace, o PVC, os 3 Services, os 3 Deployments e, em cada Deployment, dois ReplicaSets: `rev:1` (anterior à Parte C, guardado sem Pods, o que permite rollback) e `rev:2` (atual, com 1 Pod). O Secret `db-credenciais` não aparece porque não está no Git.
+
+![ArgoCD: aplicação loja Synced e Healthy, com a árvore de recursos](imagens/passo-05-argocd-loja-synced.png)
+
+**Prints desta parte (vale a pena guardar):**
+
+| Quando | O que mostrar | Nome sugerido |
+|---|---|---|
+| Passo 4 | A aplicação `loja` na interface do ArgoCD, `Synced` e `Healthy`, com a árvore de recursos visível | `passo-05-argocd-loja-synced.png` |
+| Passo 6 (opcional) | A interface do ArgoCD durante o self-heal, se apanhares o `OutOfSync` | `passo-05-argocd-self-heal.png` |
+
+Na barra de endereço cuidado para não apareceres com nada pessoal. Não mostres a palavra-passe em nenhum print.
 
 ### Parte E – Fecho (por fazer)
 
@@ -467,7 +570,15 @@ Isto prova a diferença entre as duas sondas: a readiness (`/pronto`, depende da
 | `describe` mostra Liveness, Readiness, Limits | ✅ | 2026-11-08 | |
 | `exec ... id` mostra `uid=1001(appuser)` | ✅ | 2026-11-08 | |
 | Experiência: DB em 0 réplicas, API `0/1` sem reiniciar, recupera sozinha | ✅ | 2026-11-08 | `RESTARTS 0` durante todo o teste |
-| Commit e push da Parte C | ☐ | | |
+| Commit e push da Parte C | ✅ | 2026-11-08 | |
+| Parte D: imagens do repositório revistas (sem dados pessoais) | ✅ | 2026-11-08 | Sem chaves nem ID de conta; nome e faculdade visíveis em alguns prints, aceite |
+| ArgoCD instalado, Pods `Running` | ✅ | 2026-11-08 | 7 Pods `1/1`, versão 3.6.1 |
+| Interface do ArgoCD acessível por `port-forward` | ✅ | 2026-11-08 | `https://localhost:8082` |
+| Application `loja` `Synced` e `Healthy` | ✅ | 2026-11-08 | |
+| Experiência A: alteração por `git push` aplicada pelo ArgoCD | ☐ | | |
+| Experiência B: `kubectl scale` desfeito pelo self-heal | ☐ | | |
+| Print `passo-05-argocd-loja-synced.png` | ✅ | 2026-11-08 | Cortado, sem email |
+| Commit e push da Parte D | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -500,3 +611,9 @@ Liveness pergunta "estás viva?" e, se falhar, o Kubernetes reinicia o contentor
 
 **O que é o princípio do menor privilégio num Pod?**
 Dar ao contentor só os poderes de que precisa: não correr como root, impedir escalada de privilégios, retirar capacidades Linux e usar o perfil seccomp por omissão.
+
+**O que é GitOps e que problema resolve?**
+É gerir a infraestrutura a partir do Git: o repositório é a fonte da verdade e uma ferramenta no cluster (o ArgoCD) mantém o cluster igual ao que lá está. Resolve o desvio entre o que está no Git e o que está realmente a correr, e deixa um histórico auditável de cada alteração.
+
+**O que fazem `prune` e `selfHeal` no ArgoCD?**
+`prune` apaga do cluster o que foi apagado do Git. `selfHeal` desfaz alterações feitas à mão no cluster, repondo o estado do Git.

@@ -1,0 +1,48 @@
+# =============================================================================
+# aplicacao-loja.yaml  (k8s/argocd)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: diz ao ArgoCD que aplicação deve gerir. Este ficheiro é um recurso
+#            do tipo "Application", que só existe depois de o ArgoCD estar
+#            instalado (ele traz esse tipo novo para o Kubernetes).
+# PORQUÊ:    é isto que liga o Git ao cluster. O ArgoCD compara a pasta
+#            k8s/loja/ do GitHub com o que existe no namespace "loja" e
+#            corrige qualquer diferença. O Git passa a ser a fonte da verdade.
+#
+# Aplica-se uma única vez, à mão:  kubectl apply -f k8s/argocd/aplicacao-loja.yaml
+# Depois disso, as alterações à loja fazem-se com "git push", sem kubectl apply.
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loja
+  # O ArgoCD só procura Applications no namespace onde está instalado.
+  namespace: argocd
+spec:
+  # "default" é o projeto do ArgoCD que já vem criado e sem restrições.
+  project: default
+
+  # DE ONDE vêm os manifests (o "estado desejado").
+  source:
+    # O repositório é público, por isso o ArgoCD lê-o sem credenciais.
+    repoURL: https://github.com/RubenPereira1508/Plataforma-cloud-qa.git
+    targetRevision: main # a branch a vigiar
+    path: k8s/loja # a pasta com os YAML da loja
+
+  # PARA ONDE vão: o próprio cluster onde o ArgoCD corre, no namespace "loja".
+  # https://kubernetes.default.svc é o endereço do cluster visto de dentro.
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loja
+
+  # Sincronização automática: o ArgoCD aplica sozinho, sem ninguém carregar
+  # num botão.
+  syncPolicy:
+    automated:
+      # prune: apaga do cluster o que foi apagado do Git. Sem isto, um
+      # recurso removido do Git ficava para sempre no cluster.
+      prune: true
+      # selfHeal: se alguém alterar o cluster à mão (kubectl scale, por
+      # exemplo), o ArgoCD volta a pôr o que está no Git. É isto que impede
+      # o cluster de se afastar do repositório ("drift").
+      selfHeal: true
