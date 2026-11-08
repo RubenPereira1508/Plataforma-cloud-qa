@@ -8,7 +8,7 @@
 - B. Pôr a aplicação no cluster: namespace, Deployments e Services ✅
 - C. Sondas de saúde, limites de recursos e segurança dos contentores ✅
 - D. ArgoCD: GitOps a vigiar a pasta `k8s/loja/` ✅
-- E. Fecho: documentação, limpeza e commit (por fazer)
+- E. Fecho: resumo, limitações conhecidas e gestão do cluster ✅
 
 ---
 
@@ -566,7 +566,43 @@ frontend-54cc6f648c-jzstf   1/1     Running       0          51s
 
 Na barra de endereço cuidado para não apareceres com nada pessoal. Não mostres a palavra-passe em nenhum print.
 
-### Parte E – Fecho (por fazer)
+### Parte E – Fecho ✅
+
+**O que ficou a funcionar no fim do Passo 5:**
+
+```text
+GitHub (k8s/loja/)  --lê-->  ArgoCD  --aplica-->  Kubernetes (kind, namespace loja)
+                                                    ├── frontend  (nginx, NodePort 30080 -> localhost:8081)
+                                                    ├── api       (FastAPI, ClusterIP)
+                                                    └── db        (Postgres + PVC dados-postgres)
+```
+
+- A loja corre num cluster Kubernetes local, com sondas de saúde, limites de recursos e contentores sem privilégios.
+- Os dados da base de dados sobrevivem à recriação do Pod (PVC).
+- O Git é a fonte da verdade: o ArgoCD aplica o que lá está e desfaz alterações manuais.
+
+**Limitações conhecidas (ficam para os passos seguintes):**
+
+| Limitação | Porquê é um problema | Onde se resolve |
+|---|---|---|
+| O Secret `db-credenciais` foi criado à mão e não está no Git | Se o cluster for recriado, perde-se; não é reprodutível | Passo 6 (gestão de segredos) |
+| As imagens `loja-api:0.1` e `loja-frontend:0.1` são construídas à mão e carregadas com `kind load` | Não há versionamento nem pipeline que as construa | Passo 4 (pipeline e registo de imagens) |
+| A base de dados é um Deployment com 1 réplica | Em produção usa-se um StatefulSet ou um serviço gerido (RDS) | Fica como decisão consciente de estudo |
+| Exposição por NodePort | Em produção usa-se Ingress ou balanceador de carga | Fora do âmbito |
+| Um só nó | Sem tolerância a falhas da máquina | Fora do âmbito (kind é para desenvolvimento) |
+| Sem métricas nem logs centralizados | Não se vê o que se passa dentro da loja | Passo 6 (observabilidade) |
+
+**Gerir o cluster no dia a dia.** O ArgoCD e a loja usam cerca de 2 GB de memória. Para libertar memória **sem apagar nada**, para o nó e volta a arrancá-lo depois:
+
+```powershell
+docker stop plataforma-control-plane
+docker start plataforma-control-plane
+kubectl get nodes
+```
+
+Fechar o Docker Desktop tem o mesmo efeito. Ao voltar, espera 1 a 2 minutos até `kubectl get nodes` mostrar `Ready` e os Pods voltarem a `Running`. Se o cluster não recuperar, recria-se com `kind create cluster --name plataforma --config k8s/kind-cluster.yaml`; depois é preciso repetir o `kind load` das imagens e o Secret `db-credenciais`, e o ArgoCD volta a pôr o resto (basta aplicar de novo o `aplicacao-loja.yaml`).
+
+**Apagar tudo** (só se quiseres libertar o espaço de vez): `kind delete cluster --name plataforma`. Os dados da base de dados perdem-se, porque estão dentro do nó.
 
 ---
 
@@ -598,7 +634,9 @@ Na barra de endereço cuidado para não apareceres com nada pessoal. Não mostre
 | Experiência A: alteração por `git push` aplicada pelo ArgoCD | ✅ | 2026-11-08 | 2.º Pod `frontend` criado sem `kubectl apply` |
 | Experiência B: `kubectl scale` desfeito pelo self-heal | ✅ | 2026-11-08 | Pods a mais `Terminating` aos 4 s |
 | Print `passo-05-argocd-loja-synced.png` | ✅ | 2026-11-08 | Cortado, sem email |
-| Commit e push da Parte D | ☐ | | |
+| Commit e push da Parte D | ✅ | 2026-11-08 | |
+| Parte E: resumo, limitações e gestão do cluster escritos | ✅ | 2026-11-08 | |
+| Commit e push final do Passo 5 | ☐ | | |
 
 ## 4. Para a entrevista
 
