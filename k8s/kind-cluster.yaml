@@ -1,0 +1,42 @@
+# =============================================================================
+# kind-cluster.yaml  (k8s/)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: descreve o cluster Kubernetes local que o "kind" vai criar.
+# PORQUÊ: o kind corre o Kubernetes dentro de contentores Docker, de graça e
+#         no teu computador. O EKS (da AWS) cobra por hora; fica só para
+#         sessões curtas e pontuais.
+#
+# COMO SE USA (a partir da raiz do projeto):
+#   kind create cluster --name plataforma --config k8s/kind-cluster.yaml
+#   kind delete cluster --name plataforma        # apagar (é descartável)
+#
+# O NOME do cluster ("plataforma") passa-se na linha de comandos. O kubectl
+# vai chamar-lhe "kind-plataforma" (é o "contexto"; ver doc do Passo 5).
+# =============================================================================
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+nodes:
+  # Um único nó que faz de "cérebro" (control plane) e também corre as
+  # aplicações. Poupa memória no portátil. Se um dia quisermos ver o
+  # Kubernetes a espalhar réplicas por máquinas, acrescenta-se aqui um
+  # segundo nó com "- role: worker".
+  - role: control-plane
+
+    # Abre uma porta do teu computador para dentro do cluster.
+    # Sem isto, o cluster está fechado dentro do Docker e o browser não
+    # chegava lá. Ligamos:
+    #   http://localhost:8081  (o teu computador)
+    #        -->  porta 30080 do nó  (onde o frontend vai estar exposto,
+    #                                 no Service do tipo NodePort, Parte B)
+    #
+    # Porquê 8081 e não 8080? A 8080 já é usada pelo frontend do Docker
+    # Compose; assim os dois podem estar ligados ao mesmo tempo.
+    # 30080 está no intervalo permitido para NodePort (30000 a 32767).
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 8081
+        # Só acessível a partir do teu computador (e não da rede local).
+        listenAddress: "127.0.0.1"
+        protocol: TCP

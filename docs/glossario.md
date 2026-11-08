@@ -114,6 +114,28 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Bucket S3** | "Pasta" na cloud da AWS para guardar ficheiros. O nome é único no mundo inteiro. |
 | **Tags** | Etiquetas em recursos da cloud, úteis para organização e controlo de custos. |
 
+## Kubernetes
+
+| Termo | Significado |
+|---|---|
+| **Kubernetes (K8s)** | Orquestrador de contentores: mantém o número pretendido de cópias, reinicia o que falha e reparte tráfego, em várias máquinas. |
+| **Ciclo de reconciliação** | O Kubernetes compara continuamente o estado pretendido com o real e corrige a diferença. |
+| **Cluster** | Conjunto de máquinas geridas pelo Kubernetes. |
+| **Node (nó)** | Máquina do cluster onde correm os contentores. |
+| **Control plane** | O "cérebro" do cluster, que decide o que corre e onde. |
+| **Pod** | Menor unidade do Kubernetes: um ou mais contentores que vivem juntos. |
+| **Deployment** | Descreve quantas réplicas de um Pod se querem e como as atualizar. |
+| **Service** | Endereço estável para um grupo de Pods, que reparte o tráfego entre eles. |
+| **NodePort** | Tipo de Service que abre uma porta fixa (30000 a 32767) em cada nó. |
+| **Namespace** | Separação lógica de recursos dentro do cluster (ex.: `loja`, `argocd`). |
+| **ConfigMap / Secret** | Configuração não sensível / valores sensíveis (palavras-passe) usados pelos Pods. |
+| **Manifest** | Ficheiro YAML que descreve um recurso do Kubernetes. |
+| **Probe (sonda)** | Verificação de saúde. *Liveness*: se falhar, reinicia o contentor. *Readiness*: se falhar, deixa de receber tráfego. |
+| **kubectl** | Ferramenta de linha de comandos para falar com um cluster Kubernetes. |
+| **Contexto (kubectl)** | O cluster para onde o kubectl envia os comandos neste momento. |
+| **kind** | *Kubernetes in Docker*: cria clusters Kubernetes locais em que cada nó é um contentor Docker. |
+| **EKS** | Kubernetes gerido pela AWS. O control plane cobra por hora. |
+
 ## DevOps e QA (serão aprofundados nos passos seguintes)
 
 | Termo | Significado |
