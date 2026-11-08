@@ -5,7 +5,7 @@
 **Partes deste passo:**
 
 - A. Segredos no Git com Sealed Secrets ✅
-- B. Prometheus e Grafana: métricas do cluster (por fazer)
+- B. Prometheus e Grafana: métricas do cluster ✅
 - C. Métricas da própria API (por fazer)
 - D. Logs centralizados com Loki, opcional (por fazer)
 - E. Fecho (por fazer)
@@ -45,6 +45,23 @@ Por omissão (âmbito *strict*), um `SealedSecret` só é desencriptado com o **
 ### 1.4 Limitação: a chave privada
 
 Se o cluster for apagado, perde-se a chave privada e os `SealedSecret` que estão no Git deixam de poder ser desencriptados. Nesse caso volta-se a encriptar com a chave do cluster novo. Em produção faz-se cópia de segurança da chave (guardada fora do Git, nunca no repositório).
+
+### 1.5 Observabilidade: métricas, logs e traces
+
+Observar um sistema é conseguir perceber o que se passa lá dentro olhando para o que ele produz. Há três tipos de dados:
+
+| Tipo | O que é | Exemplo na loja | Ferramenta |
+|---|---|---|---|
+| **Métricas** | Números ao longo do tempo | CPU do Pod `api`, pedidos por segundo, erros por minuto | Prometheus + Grafana |
+| **Logs** | Linhas de texto que a aplicação escreve | "produto criado", uma mensagem de erro | Loki (Parte D) |
+| **Traces** | O caminho de um pedido por vários serviços | Pedido do browser até à base de dados | Fora do âmbito |
+
+### 1.6 Prometheus e Grafana
+
+- O **Prometheus** funciona por *scraping*: de tempos a tempos faz um pedido HTTP a cada alvo (um endereço `/metrics`) e guarda os números com a hora. Não espera que lhe enviem dados, vai buscá-los.
+- O **Grafana** não guarda métricas; lê-as do Prometheus e desenha gráficos (*dashboards*).
+- O **Prometheus Operator** deixa configurar o Prometheus com recursos do Kubernetes. Um **ServiceMonitor** diz "recolhe as métricas deste Service" (vai ser preciso na Parte C, para a API).
+- O **kube-state-metrics** transforma o estado dos objetos do Kubernetes (réplicas pedidas, Pods prontos, reinícios) em métricas.
 
 ---
 
@@ -129,6 +146,72 @@ Na interface do ArgoCD a `loja` voltou a `Healthy`. A árvore mostra o `SealedSe
 
 **Nota sobre o arranque do cluster.** Ao religar o Docker, o `frontend` entrou em `CrashLoopBackOff`: o nginx só resolve o nome `api` no arranque, e o DNS do cluster (`coredns`) ainda estava a recuperar (`host not found in upstream "api"`). Resolveu-se apagando o Pod. Fica como melhoria futura configurar o nginx para resolver o nome em tempo de execução (diretiva `resolver`).
 
+### Parte B – Prometheus e Grafana ✅
+
+**O que se instalou.** O chart `kube-prometheus-stack`, pelo ArgoCD (como o Sealed Secrets), com o ficheiro `k8s/argocd/aplicacao-prometheus-grafana.yaml`. Traz o Prometheus, o Grafana, o Prometheus Operator e o kube-state-metrics, com dashboards já feitos para o cluster.
+
+**Escolhas de configuração (cada uma está comentada no ficheiro):**
+
+| Escolha | Porquê |
+|---|---|
+| `alertmanager` desligado | Não precisamos de alertas por email/Slack agora; poupa memória |
+| `nodeExporter` desligado | No kind dentro do Docker Desktop costuma falhar ao arrancar (problema de montagem do sistema de ficheiros do nó). As métricas por contentor continuam a existir |
+| `kubeEtcd`, `kubeControllerManager`, `kubeScheduler`, `kubeProxy` desligados | No kind não expõem métricas da forma esperada e apareciam "em baixo" sem estarem |
+| `admissionWebhooks` e `tls` do operator desligados | Precisam de certificados e jobs auxiliares que complicam a instalação por ArgoCD; num laboratório local não compensa |
+| `retention: 2d` | Os dados ficam num disco temporário; guardar pouco tempo chega |
+| `serviceMonitorSelectorNilUsesHelmValues: false` | Faz o Prometheus ler ServiceMonitors de qualquer namespace; necessário na Parte C |
+| Limites de memória em cada componente | A stack é pesada; os limites impedem-na de consumir o portátil todo |
+| `ServerSideApply=true` e `CreateNamespace=true` | Os CRDs do chart são grandes demais para o `apply` normal; o namespace `monitoring` é criado se não existir |
+
+**Passos:**
+
+```powershell
+kubectl apply -f k8s/argocd/aplicacao-prometheus-grafana.yaml
+kubectl get applications -n argocd
+kubectl get pods -n monitoring -w
+```
+
+A primeira instalação demorou cerca de 3 minutos (descarregar o chart e as imagens). A aplicação passou por `OutOfSync/Missing`, depois `Synced/Degraded` e `Synced/Progressing` e ficou `Synced/Healthy`. Os 4 Pods ficaram `Running`:
+
+```text
+prometheus-grafana-65b66d99d4-l6g2m                    3/3     Running   0          91s
+prometheus-kube-prometheus-operator-5c46f599fc-mxbpc   1/1     Running   0          107s
+prometheus-kube-state-metrics-5759bf56bb-9d87p         1/1     Running   0          107s
+prometheus-prometheus-kube-prometheus-prometheus-0     2/2     Running   0          102s
+```
+
+**Observação: o Grafana reinicia quando o ArgoCD reprocessa o chart.** Durante a primeira sincronização apareceram três Pods do Grafana em sequência, e voltou a acontecer depois de aplicar a definição atualizada da Application (apareceu um Pod novo, `3/3` ao fim de cerca de 1 minuto, e o antigo foi terminado). O resto da stack não foi tocado. A causa provável é um valor gerado pelo chart em cada processamento; não foi confirmada. É inofensivo, mas fica anotado para observar se volta a acontecer sem mexer em nada.
+
+**Fixar a versão do chart.** Na primeira instalação usou-se `targetRevision: "*"` (a mais recente). Para ver o que ficou:
+
+```powershell
+kubectl get application prometheus-grafana -n argocd -o jsonpath="{.status.sync.revision}"
+```
+
+Resultado: `93.1.0`. Substituiu-se o `"*"` por `"93.1.0"` no ficheiro e voltou-se a aplicar. Fixar a versão impede que uma atualização do chart mude a plataforma sem ninguém decidir. Os Pods do Prometheus, do operator e do kube-state-metrics não foram reiniciados.
+
+**Abrir o Grafana:**
+
+```powershell
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+```
+
+Em `http://localhost:3000`, utilizador `admin`. A palavra-passe inicial obtém-se do Secret `prometheus-grafana` (descodificando o `admin-password`), sem a escrever em lado nenhum.
+
+**Decisão de segurança consciente:** a palavra-passe inicial deste chart é a mesma para toda a gente que o instala. O Grafana só é acessível por `port-forward` no computador local, por isso para um laboratório é aceitável. Em produção ficava num Secret próprio (um `SealedSecret`), o que se pode fazer na Parte E.
+
+**Ver a loja:** em Dashboards, **Kubernetes / Compute Resources / Namespace (Pods)** com o namespace `loja`. Mostra a CPU e a memória de cada Pod. A tabela *CPU Quota* mostra os `requests` e `limits` definidos no Passo 5 (Parte C):
+
+| Pod | CPU requests | CPU limits |
+|---|---|---|
+| `db` | 0.100 | 0.500 |
+| `api` | 0.0500 | 0.250 |
+| `frontend` | 0.0250 | 0.100 |
+
+São exatamente os valores dos ficheiros YAML, o que mostra que o Kubernetes os aplicou e que o Prometheus os lê.
+
+![Grafana: CPU e memória dos Pods da loja](imagens/passo-06-grafana-loja.png)
+
 ---
 
 ## 3. Registo do que fizeste
@@ -145,7 +228,13 @@ Na interface do ArgoCD a `loja` voltou a `Healthy`. A árvore mostra o `SealedSe
 | Secret manual apagado e recriado pelo controlador | ✅ | 2026-11-08 | `SYNCED True` |
 | Pod novo da API arranca com o Secret novo | ✅ | 2026-11-08 | `1/1` em 7 s |
 | Print `passo-06-argocd-sealedsecret.png` | ✅ | 2026-11-08 | Cortado, sem email |
-| Commit e push do doc da Parte A | ☐ | | |
+| Commit e push do doc da Parte A | ✅ | 2026-11-08 | |
+| Application `prometheus-grafana` criada, 4 Pods `Running` | ✅ | 2026-11-08 | |
+| Versão do chart fixada | ✅ | 2026-11-08 | `93.1.0` |
+| Grafana acessível por `port-forward` | ✅ | 2026-11-08 | `http://localhost:3000` |
+| Dashboard do namespace `loja` com dados | ✅ | 2026-11-08 | |
+| Print `passo-06-grafana-loja.png` | ✅ | 2026-11-08 | |
+| Commit e push da Parte B | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -160,3 +249,12 @@ Os `SealedSecret` no Git deixam de poder ser desencriptados e é preciso voltar 
 
 **Porque é que o controlador não substituiu o Secret que já existia?**
 Por segurança: só gere Secrets que ele próprio criou, para não apagar por engano algo que não é seu.
+
+**Qual a diferença entre métricas, logs e traces?**
+Métricas são números ao longo do tempo (CPU, pedidos por segundo), logs são linhas de texto escritas pela aplicação e traces seguem um pedido por vários serviços.
+
+**Como funciona o Prometheus?**
+Por *scraping*: faz pedidos HTTP periódicos aos alvos (um endereço `/metrics`) e guarda os valores com a hora. O Grafana lê do Prometheus e desenha os gráficos.
+
+**Porque fixaste a versão do Helm chart?**
+Para que uma versão nova não seja instalada sem ninguém decidir. Na primeira instalação usei a mais recente, vi qual ficou e fixei-a.

@@ -137,6 +137,24 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **millicore (`m`)** | Unidade de CPU: `100m` = 0,1 de um núcleo. |
 | **securityContext** | Regras de segurança de um Pod ou contentor (utilizador, capacidades, escalada de privilégios). |
 | **Menor privilégio** | Dar a cada componente só os poderes de que precisa. |
+| **GitOps** | Forma de gerir infraestrutura em que o Git é a fonte da verdade e uma ferramenta mantém o cluster igual ao repositório. |
+| **ArgoCD** | Ferramenta de GitOps que corre no cluster, compara o Git com o estado real e sincroniza as diferenças. |
+| **Application (ArgoCD)** | Recurso que diz ao ArgoCD que repositório, pasta e namespace deve gerir. |
+| **Synced / OutOfSync** | Estado no ArgoCD: o cluster é igual ao Git / difere do Git. |
+| **prune** | Apagar do cluster o que foi removido do Git. |
+| **selfHeal** | Desfazer automaticamente alterações feitas à mão no cluster. |
+| **port-forward** | Liga uma porta do teu computador a um Service dentro do cluster, enquanto o comando corre. |
+| **Sealed Secrets** | Ferramenta que encripta Secrets com uma chave pública para poderem ir para o Git; só o controlador do cluster os desencripta. |
+| **SealedSecret** | Recurso do Kubernetes com o segredo já encriptado; o controlador transforma-o num Secret normal. |
+| **kubeseal** | Programa que corre no teu computador e encripta um Secret para gerar um SealedSecret. |
+| **Chave pública / privada** | Par de chaves: a pública só encripta e pode ser conhecida; a privada só desencripta e fica guardada. |
+| **Helm chart** | Pacote de manifests do Kubernetes configurável, que pode ser instalado com Helm ou pelo ArgoCD. |
+| **Observabilidade** | Perceber o que se passa num sistema através dos dados que ele produz: métricas, logs e traces. |
+| **Métrica** | Número medido ao longo do tempo (CPU, pedidos por segundo, erros). |
+| **Prometheus** | Sistema que recolhe e guarda métricas, fazendo pedidos periódicos aos alvos (*scraping*). |
+| **Grafana** | Ferramenta que desenha dashboards a partir das métricas guardadas no Prometheus. |
+| **ServiceMonitor** | Recurso que diz ao Prometheus que Service deve recolher métricas. |
+| **Dashboard** | Painel de gráficos que mostra o estado de um sistema. |
 | **kubectl** | Ferramenta de linha de comandos para falar com um cluster Kubernetes. |
 | **Contexto (kubectl)** | O cluster para onde o kubectl envia os comandos neste momento. |
 | **kind** | *Kubernetes in Docker*: cria clusters Kubernetes locais em que cada nó é um contentor Docker. |

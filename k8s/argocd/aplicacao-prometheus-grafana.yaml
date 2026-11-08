@@ -1,0 +1,129 @@
+# =============================================================================
+# aplicacao-prometheus-grafana.yaml  (k8s/argocd)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: manda o ArgoCD instalar o "kube-prometheus-stack", um Helm chart
+#            que traz de uma vez:
+#              - Prometheus: recolhe e guarda métricas (números ao longo do tempo)
+#              - Grafana: desenha gráficos (dashboards) com essas métricas
+#              - kube-state-metrics: métricas sobre os objetos do Kubernetes
+#              - Prometheus Operator: gere o Prometheus através de recursos YAML
+#                (ServiceMonitor, etc.)
+#              - dashboards e regras já feitos para o cluster
+# PORQUÊ:    sem métricas não se sabe como a loja se comporta (CPU, memória,
+#            reinícios, pedidos). É também a base para os testes de carga (k6)
+#            do Passo 8.
+#
+# Aplica-se uma única vez:
+#   kubectl apply -f k8s/argocd/aplicacao-prometheus-grafana.yaml
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-grafana
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    # "*" apanha a versão mais recente do chart na primeira instalação.
+    # Depois de instalar, FIXA-SE a versão que ficou (ver doc do Passo 6), para
+    # uma atualização do chart não mudar a plataforma sem ninguém decidir.
+    targetRevision: "93.1.0"
+    helm:
+      # O nome da "release" dá nome aos recursos. Com "prometheus", o Grafana
+      # fica com o Service "prometheus-grafana".
+      releaseName: prometheus
+      valuesObject:
+        # --- Peças que desligamos -----------------------------------------
+        # Alertmanager (envia alertas por email/Slack): não precisamos agora e
+        # poupa memória.
+        alertmanager:
+          enabled: false
+
+        # node-exporter (métricas da máquina): no kind dentro do Docker Desktop
+        # costuma falhar ao arrancar (problema de montagem do sistema de
+        # ficheiros do nó). As métricas por contentor continuam a existir.
+        nodeExporter:
+          enabled: false
+
+        # Componentes do plano de controlo do Kubernetes: no kind não expõem
+        # métricas da forma esperada e apareciam como "em baixo" sem estarem.
+        kubeEtcd:
+          enabled: false
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeProxy:
+          enabled: false
+
+        # --- Prometheus Operator ------------------------------------------
+        prometheusOperator:
+          # O webhook de validação precisa de certificados e de jobs auxiliares
+          # que complicam a instalação por ArgoCD. Para um laboratório local,
+          # desligamos.
+          admissionWebhooks:
+            enabled: false
+          tls:
+            enabled: false
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 192Mi
+
+        # --- Prometheus ---------------------------------------------------
+        prometheus:
+          prometheusSpec:
+            # Quanto tempo guarda as métricas. Pouco, porque é um laboratório
+            # e os dados ficam num disco temporário (perdem-se se o Pod morrer).
+            retention: 2d
+            # Por omissão o Prometheus só lê ServiceMonitors da própria release.
+            # Com "false" lê os de qualquer namespace, o que vamos precisar na
+            # Parte C para recolher as métricas da API da loja.
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            resources:
+              requests:
+                cpu: 100m
+                memory: 400Mi
+              limits:
+                memory: 1Gi
+
+        # --- Grafana ------------------------------------------------------
+        grafana:
+          # Os dashboards mostram a hora de Lisboa.
+          defaultDashboardsTimezone: Europe/Lisbon
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+
+        kube-state-metrics:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Cria o namespace "monitoring" se não existir.
+      - CreateNamespace=true
+      # Os CRDs deste chart são demasiado grandes para o "apply" normal
+      # (o mesmo motivo do --server-side na instalação do ArgoCD).
+      - ServerSideApply=true
