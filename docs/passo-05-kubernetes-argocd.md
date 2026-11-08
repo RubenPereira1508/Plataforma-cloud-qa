@@ -7,7 +7,7 @@
 - A. Teoria, instalação do kind e do kubectl, e criar o cluster ✅
 - B. Pôr a aplicação no cluster: namespace, Deployments e Services ✅
 - C. Sondas de saúde, limites de recursos e segurança dos contentores ✅
-- D. ArgoCD: GitOps a vigiar a pasta `k8s/loja/` (em curso)
+- D. ArgoCD: GitOps a vigiar a pasta `k8s/loja/` ✅
 - E. Fecho: documentação, limpeza e commit (por fazer)
 
 ---
@@ -441,7 +441,7 @@ Isto prova a diferença entre as duas sondas: a readiness (`/pronto`, depende da
 
 **Prints desta parte:** nenhum é necessário. Tudo o que importa é texto do terminal e vai para o doc como texto (cola-me o `get pods` da experiência 5, com a API a `0/1` e `RESTARTS 0`).
 
-### Parte D – ArgoCD: GitOps (em curso)
+### Parte D – ArgoCD: GitOps ✅
 
 **O que é GitOps.** Até agora, para alterar a loja corrias `kubectl apply` no teu computador. O problema: o que está no cluster pode ficar diferente do que está no Git, e ninguém sabe quem mudou o quê. Em GitOps, o **Git é a única fonte da verdade** e uma ferramenta dentro do cluster, o **ArgoCD**, compara continuamente a pasta `k8s/loja/` do GitHub com o que existe no cluster e corrige as diferenças. Para alterar a loja, fazes `git push`. Não há `kubectl apply`.
 
@@ -537,6 +537,26 @@ Na árvore da interface vê-se o namespace, o PVC, os 3 Services, os 3 Deploymen
 
 ![ArgoCD: aplicação loja Synced e Healthy, com a árvore de recursos](imagens/passo-05-argocd-loja-synced.png)
 
+*Experiência A – alteração por Git.* Mudei `replicas: 1` para `2` no `k8s/loja/30-frontend.yaml`, fiz commit e push, sem correr `kubectl apply`. O ArgoCD detetou a diferença e o Kubernetes criou o Pod que faltava; o Pod antigo (`AGE 27m`) não foi tocado e a aplicação voltou a `Synced`:
+
+```text
+frontend-54cc6f648c-6p9vn   1/1     Running   0          27m
+frontend-54cc6f648c-jzstf   1/1     Running   0          7s
+NAME   SYNC STATUS   HEALTH STATUS
+loja   Synced        Healthy
+```
+
+*Experiência B – self-heal.* Com o Git a dizer 2, fiz `kubectl scale ... --replicas=5` à mão. O ArgoCD repôs o estado do Git em poucos segundos: os Pods novos já estavam `Terminating` aos 4 s, sem chegarem a `1/1`. O resultado final foi 2 Pods `Running` e a aplicação `Synced`. O `kubectl scale` não alterou nada de forma duradoura: quem manda é o Git.
+
+```text
+frontend-54cc6f648c-4g5lx   0/1     Terminating   0          4s
+frontend-54cc6f648c-f2wl7   0/1     Terminating   0          4s
+frontend-54cc6f648c-6p9vn   1/1     Running       0          28m
+frontend-54cc6f648c-jzstf   1/1     Running       0          51s
+```
+
+*Repor 1 réplica.* Voltei a pôr `replicas: 1` no ficheiro, commit e push; o ArgoCD removeu o Pod a mais (ficou o mais antigo, `6p9vn`) e a aplicação ficou `Synced` e `Healthy`.
+
 **Prints desta parte (vale a pena guardar):**
 
 | Quando | O que mostrar | Nome sugerido |
@@ -575,8 +595,8 @@ Na barra de endereço cuidado para não apareceres com nada pessoal. Não mostre
 | ArgoCD instalado, Pods `Running` | ✅ | 2026-11-08 | 7 Pods `1/1`, versão 3.6.1 |
 | Interface do ArgoCD acessível por `port-forward` | ✅ | 2026-11-08 | `https://localhost:8082` |
 | Application `loja` `Synced` e `Healthy` | ✅ | 2026-11-08 | |
-| Experiência A: alteração por `git push` aplicada pelo ArgoCD | ☐ | | |
-| Experiência B: `kubectl scale` desfeito pelo self-heal | ☐ | | |
+| Experiência A: alteração por `git push` aplicada pelo ArgoCD | ✅ | 2026-11-08 | 2.º Pod `frontend` criado sem `kubectl apply` |
+| Experiência B: `kubectl scale` desfeito pelo self-heal | ✅ | 2026-11-08 | Pods a mais `Terminating` aos 4 s |
 | Print `passo-05-argocd-loja-synced.png` | ✅ | 2026-11-08 | Cortado, sem email |
 | Commit e push da Parte D | ☐ | | |
 

@@ -29,7 +29,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 │   ├── 00-exercicio-s3/     # exercício de aprendizagem (bucket de teste, já destruído)
 │   ├── 01-estado-remoto/    # bucket S3 que guarda o state das outras pastas
 │   └── 02-rede/             # VPC e (Parte D) sub-redes, rotas; state no bucket
-├── k8s/                 # (Passo 5) manifests, Helm e ArgoCD
+├── k8s/                 # (Passo 5) kind, manifests da loja (loja/) e ArgoCD (argocd/)
 ├── observabilidade/     # (Passo 6) Prometheus, Grafana, Loki
 └── qa/                  # (Passos 7 a 9) testes de API, E2E, k6, Pact, chaos
 ```
@@ -42,7 +42,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 02 | Docker e a aplicação da loja (local) | Concluído |
 | 03 | Terraform: estado remoto e rede (VPC) | Concluído |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Em curso (pipeline escrita; bloqueada por um problema de faturação da conta GitHub, a aguardar o suporte) |
-| 05 | Kubernetes e ArgoCD (GitOps) | Em curso (partes A, B e C concluídas; D por fazer) |
+| 05 | Kubernetes e ArgoCD (GitOps) | Em curso (partes A, B, C e D concluídas; E por fazer) |
 | 06 | Observabilidade e segredos | Por fazer |
 | 07 | Estratégia de testes e testes de API | Por fazer |
 | 08 | Contract testing, E2E, performance e quality gates | Por fazer |
@@ -80,5 +80,6 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-06 | O state da pasta `01-estado-remoto` fica local | O bucket tem de existir antes de poder guardar state (ovo e galinha); a pasta quase nunca muda |
 | 2026-11-06 | Rede sem NAT Gateway | O NAT Gateway cobra por hora e os créditos são limitados |
 | 2026-11-06 | Não mexer na VPC por omissão da AWS | Não é gerida pelo Terraform; o projeto usa a sua própria VPC |
+| 2026-11-08 | Repositório passa a público | O ArgoCD lê-o sem credenciais, o GitHub Actions é gratuito em repositórios públicos e o portfolio tem de ser visível. Antes foram pesquisados segredos no histórico e o `.env` está fora do Git |
 | 2026-11-08 | Avançar com o Passo 5 enquanto a pipeline do Passo 4 está bloqueada | O bloqueio é da faturação da conta GitHub (pedido enviado ao suporte); o Kubernetes local não depende do GitHub Actions e o calendário aponta para o fim de novembro |
 | 2026-11-08 | Cluster kind de um único nó, com a porta 8081 do computador ligada à 30080 do nó | Poupa memória no portátil; a 8081 não colide com a 8080 do Docker Compose |
