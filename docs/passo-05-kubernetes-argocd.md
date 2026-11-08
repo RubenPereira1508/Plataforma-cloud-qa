@@ -636,7 +636,7 @@ Fechar o Docker Desktop tem o mesmo efeito. Ao voltar, espera 1 a 2 minutos até
 | Print `passo-05-argocd-loja-synced.png` | ✅ | 2026-11-08 | Cortado, sem email |
 | Commit e push da Parte D | ✅ | 2026-11-08 | |
 | Parte E: resumo, limitações e gestão do cluster escritos | ✅ | 2026-11-08 | |
-| Commit e push final do Passo 5 | ☐ | | |
+| Commit e push final do Passo 5 | ✅ | 2026-11-08 | |
 
 ## 4. Para a entrevista
 

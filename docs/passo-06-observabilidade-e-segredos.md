@@ -308,7 +308,7 @@ Gerou-se tráfego com 300 rondas de 3 pedidos (`/produtos`, `/produtos/1`, `/pro
 | Alvo da API em `1/1 up` no Prometheus | ✅ | 2026-11-08 | |
 | Gráfico de pedidos por código de resposta no Grafana | ✅ | 2026-11-08 | |
 | Prints `passo-06-prometheus-target-api.png` e `passo-06-grafana-api.png` | ✅ | 2026-11-08 | |
-| Commit e push do doc da Parte C | ☐ | | |
+| Commit e push do doc da Parte C | ✅ | 2026-11-08 | |
 
 ## 4. Para a entrevista
 
