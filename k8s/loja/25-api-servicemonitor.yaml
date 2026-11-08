@@ -1,0 +1,33 @@
+# =============================================================================
+# 25-api-servicemonitor.yaml  (k8s/loja)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: diz ao Prometheus para recolher as métricas da API da loja.
+# PORQUÊ: o Prometheus não adivinha o que deve ler. Um ServiceMonitor é o
+# recurso do Prometheus Operator que descreve um alvo: "procura o Service com
+# esta etiqueta e lê /metrics na porta com este nome".
+#
+# O Prometheus lê ServiceMonitors de qualquer namespace porque na Parte B
+# configurámos serviceMonitorSelectorNilUsesHelmValues: false.
+# Este ficheiro vive em k8s/loja/, por isso é o ArgoCD (Application "loja")
+# que o aplica. O CRD ServiceMonitor já existe, instalado com a stack da Parte B.
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api
+  namespace: loja
+  labels:
+    app: api
+spec:
+  # Escolhe o Service pela etiqueta (ver 20-api.yaml).
+  selector:
+    matchLabels:
+      app: api
+  # Só procura Services neste namespace.
+  namespaceSelector:
+    matchNames:
+      - loja
+  endpoints:
+    - port: http # nome da porta do Service
+      path: /metrics # endereço onde a API publica as métricas
+      interval: 15s # de 15 em 15 segundos

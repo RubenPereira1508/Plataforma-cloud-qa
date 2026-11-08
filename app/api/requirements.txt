@@ -17,3 +17,8 @@ uvicorn>=0.30,<1.0
 # Driver para falar com o PostgreSQL. A variante [binary] já traz a biblioteca
 # C necessária (libpq), por isso não precisamos de instalar nada no sistema.
 psycopg[binary]>=3.2,<4.0
+
+# Métricas para o Prometheus (Passo 6, Parte C). Mede automaticamente cada
+# pedido (quantos, com que código de resposta, quanto tempo demorou) e
+# publica-os no endereço /metrics, que o Prometheus lê.
+prometheus-fastapi-instrumentator>=7.0,<8.0

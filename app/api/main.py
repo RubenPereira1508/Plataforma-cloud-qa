@@ -27,6 +27,7 @@ from contextlib import asynccontextmanager
 import psycopg
 from fastapi import FastAPI, HTTPException, Path
 from psycopg.rows import dict_row
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
 # -----------------------------------------------------------------------------
@@ -99,6 +100,20 @@ app = FastAPI(
     description="API de exemplo usada no projeto Plataforma Cloud + QA.",
     version="0.2.0",
     lifespan=ciclo_de_vida,
+)
+
+
+# -----------------------------------------------------------------------------
+# Métricas (Passo 6, Parte C)
+# -----------------------------------------------------------------------------
+# O Instrumentator mede cada pedido (número, código de resposta, duração) e
+# cria o endereço /metrics, onde o Prometheus vai buscar os números.
+# excluded_handlers: ignoramos /saude, /pronto e /metrics para que as sondas do
+# Kubernetes e as leituras do Prometheus não encham os gráficos com tráfego
+# que não é de clientes. include_in_schema=False esconde /metrics da
+# documentação automática (/docs).
+Instrumentator(excluded_handlers=["/saude", "/pronto", "/metrics"]).instrument(app).expose(
+    app, include_in_schema=False
 )
 
 
