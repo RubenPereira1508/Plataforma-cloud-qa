@@ -6,7 +6,7 @@
 
 - A. Segredos no Git com Sealed Secrets ✅
 - B. Prometheus e Grafana: métricas do cluster ✅
-- C. Métricas da própria API (por fazer)
+- C. Métricas da própria API ✅
 - D. Logs centralizados com Loki, opcional (por fazer)
 - E. Fecho (por fazer)
 
@@ -212,6 +212,74 @@ São exatamente os valores dos ficheiros YAML, o que mostra que o Kubernetes os 
 
 ![Grafana: CPU e memória dos Pods da loja](imagens/passo-06-grafana-loja.png)
 
+### Parte C – Métricas da própria API ✅
+
+Até aqui o Prometheus só via o cluster (CPU, memória, Pods). Nesta parte a API passa a medir os **seus próprios pedidos**: quantos, com que código de resposta e quanto tempo demoram.
+
+**O que mudou no código e nos ficheiros:**
+
+| Ficheiro | Alteração | Porquê |
+|---|---|---|
+| `app/api/requirements.txt` | Nova biblioteca `prometheus-fastapi-instrumentator` | Mede cada pedido e publica os números |
+| `app/api/main.py` | `Instrumentator(...).instrument(app).expose(app)` | Cria o endereço `/metrics`, que o Prometheus lê. Ficam de fora `/saude`, `/pronto` e `/metrics`, para as sondas do Kubernetes não encherem os gráficos com tráfego que não é de clientes |
+| `k8s/loja/20-api.yaml` | Imagem `loja-api:0.2`; etiqueta `app: api` e nome `http` na porta do Service | O ServiceMonitor encontra o Service pela etiqueta e a porta pelo nome |
+| `k8s/loja/25-api-servicemonitor.yaml` | Novo | Diz ao Prometheus que Service ler, em que porta e caminho, e de quanto em quanto tempo (15 s) |
+
+**Passos:**
+
+```powershell
+docker build -t loja-api:0.2 ./app/api
+kind load docker-image loja-api:0.2 --name plataforma
+git add .
+git commit -m "Passo 6 Parte C: metricas da API (Prometheus)"
+git push
+```
+
+A imagem tem de estar no cluster **antes** do push; senão o ArgoCD pede uma imagem que o nó ainda não tem. Passados cerca de 3 minutos o ArgoCD ainda não tinha reagido (lê o Git de 3 em 3 minutos); forçou-se a leitura:
+
+```powershell
+kubectl annotate application loja -n argocd argocd.argoproj.io/refresh=hard --overwrite
+```
+
+Resultado: apareceu o ServiceMonitor `api` e um Pod `api` novo. O antigo manteve-se `1/1` até o novo ficar pronto (Rolling Update) e depois saiu:
+
+```text
+NAME                        READY   STATUS    RESTARTS      AGE
+api-6756c8dbf4-8kbcg        1/1     Running   0             17s
+db-865c779855-xwgzv         1/1     Running   1 (52m ago)   89m
+frontend-54cc6f648c-c7trn   1/1     Running   0             50m
+```
+
+**Ver as métricas em bruto** (com `kubectl port-forward svc/api -n loja 8000:8000`):
+
+```text
+http_requests_total{handler="/produtos",method="GET",status="2xx"} 1.0
+```
+
+Significa: 1 pedido `GET /produtos` com resposta 2xx. É um **contador**: só aumenta (e volta a zero se o Pod reiniciar).
+
+**O Prometheus recolhe a API.** Em `http://localhost:9090` (port-forward ao serviço `prometheus-kube-prometheus-prometheus`), **Status → Targets** mostra `serviceMonitor/loja/api/0` com **1/1 up**, a ler o Pod novo e a demorar cerca de 2 ms por leitura.
+
+![Prometheus: alvo da API em UP](imagens/passo-06-prometheus-target-api.png)
+
+**Pedidos por segundo.** A consulta (em linguagem *PromQL*) é:
+
+```text
+sum by (status) (rate(http_requests_total{namespace="loja"}[1m]))
+```
+
+- `http_requests_total{namespace="loja"}`: o contador, só da loja.
+- `rate(...[1m])`: quantos pedidos por segundo, calculado sobre o último minuto (a diferença do contador entre leituras).
+- `sum by (status)`: soma por código de resposta, ficando uma linha por `2xx` e outra por `4xx`.
+
+Gerou-se tráfego com 300 rondas de 3 pedidos (`/produtos`, `/produtos/1`, `/produtos/9999`): dois dão 200 e um dá 404.
+
+**Observação: a linha `4xx` não apareceu na primeira ronda.** A API já tinha contado os 404 (`status="4xx"` com `60.0`), mas o gráfico só mostrava `2xx`. Motivo: o `rate` calcula a variação entre duas leituras, e a série `4xx` só nasceu com o primeiro 404, já com o valor 60. Sem leitura anterior não há variação para desenhar. Numa segunda ronda de tráfego a série já existia, subiu, e a linha apareceu. Conclusão prática: um contador novo só aparece num `rate` depois de variar.
+
+**Resultado no Grafana** (Explore, fonte Prometheus, últimos 15 minutos): a linha `2xx` chega a cerca de 6,5 pedidos por segundo e a `4xx` a cerca de 3,3, ou seja, 2 respostas boas por cada 404, exatamente como o teste.
+
+![Grafana: pedidos por segundo da API, por código de resposta](imagens/passo-06-grafana-api.png)
+
 ---
 
 ## 3. Registo do que fizeste
@@ -234,7 +302,13 @@ São exatamente os valores dos ficheiros YAML, o que mostra que o Kubernetes os 
 | Grafana acessível por `port-forward` | ✅ | 2026-11-08 | `http://localhost:3000` |
 | Dashboard do namespace `loja` com dados | ✅ | 2026-11-08 | |
 | Print `passo-06-grafana-loja.png` | ✅ | 2026-11-08 | |
-| Commit e push da Parte B | ☐ | | |
+| Commit e push da Parte B | ✅ | 2026-11-08 | |
+| Imagem `loja-api:0.2` construída e carregada no cluster | ✅ | 2026-11-08 | |
+| ServiceMonitor `api` criado pelo ArgoCD | ✅ | 2026-11-08 | |
+| Alvo da API em `1/1 up` no Prometheus | ✅ | 2026-11-08 | |
+| Gráfico de pedidos por código de resposta no Grafana | ✅ | 2026-11-08 | |
+| Prints `passo-06-prometheus-target-api.png` e `passo-06-grafana-api.png` | ✅ | 2026-11-08 | |
+| Commit e push do doc da Parte C | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -258,3 +332,13 @@ Por *scraping*: faz pedidos HTTP periódicos aos alvos (um endereço `/metrics`)
 
 **Porque fixaste a versão do Helm chart?**
 Para que uma versão nova não seja instalada sem ninguém decidir. Na primeira instalação usei a mais recente, vi qual ficou e fixei-a.
+
+
+**O que é um ServiceMonitor e porque é preciso?**
+É um recurso do Prometheus Operator que descreve um alvo: que Service procurar (por etiqueta), em que porta e caminho ler as métricas e com que frequência. Sem ele o Prometheus não sabe que a API existe.
+
+**O que faz o `rate()` e porque não se usa o contador diretamente?**
+Um contador só aumenta, por isso o valor absoluto diz pouco. O `rate()` converte-o em variação por segundo, que é o que interessa (pedidos por segundo).
+
+**Porque excluíste `/saude` e `/pronto` das métricas?**
+Porque são pedidos do Kubernetes, não de clientes. Se contassem, os gráficos mostravam tráfego constante que não corresponde ao uso real da loja.

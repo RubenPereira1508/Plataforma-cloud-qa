@@ -43,7 +43,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 03 | Terraform: estado remoto e rede (VPC) | Concluído |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Em curso (pipeline escrita; bloqueada por um problema de faturação da conta GitHub, a aguardar o suporte) |
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
-| 06 | Segredos e observabilidade | Em curso (partes A e B concluídas: Sealed Secrets, Prometheus e Grafana) |
+| 06 | Segredos e observabilidade | Em curso (partes A, B e C concluídas: Sealed Secrets, Prometheus e Grafana, métricas da API) |
 | 07 | Estratégia de testes e testes de API | Por fazer |
 | 08 | Contract testing, E2E, performance e quality gates | Por fazer |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |

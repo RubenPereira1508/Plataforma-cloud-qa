@@ -154,6 +154,8 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Prometheus** | Sistema que recolhe e guarda métricas, fazendo pedidos periódicos aos alvos (*scraping*). |
 | **Grafana** | Ferramenta que desenha dashboards a partir das métricas guardadas no Prometheus. |
 | **ServiceMonitor** | Recurso que diz ao Prometheus que Service deve recolher métricas. |
+| **Contador (counter)** | Tipo de métrica que só aumenta (ex.: total de pedidos). Para ver a velocidade usa-se `rate()`. |
+| **PromQL** | Linguagem de consulta do Prometheus (ex.: `rate(http_requests_total[1m])`). |
 | **Dashboard** | Painel de gráficos que mostra o estado de um sistema. |
 | **kubectl** | Ferramenta de linha de comandos para falar com um cluster Kubernetes. |
 | **Contexto (kubectl)** | O cluster para onde o kubectl envia os comandos neste momento. |
