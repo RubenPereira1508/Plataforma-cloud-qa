@@ -28,9 +28,10 @@ spec:
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
-    # "*" apanha a versão mais recente do chart na primeira instalação.
-    # Depois de instalar, FIXA-SE a versão que ficou (ver doc do Passo 6), para
-    # uma atualização do chart não mudar a plataforma sem ninguém decidir.
+    # Versão do chart fixada. Na primeira instalação usou-se "*" (a mais
+    # recente), que resolveu para a 93.1.0, e fixou-se essa versão para uma
+    # atualização do chart não mudar a plataforma sem ninguém decidir.
+    # Para atualizar: mudar este número, ler as notas da versão e sincronizar.
     targetRevision: "93.1.0"
     helm:
       # O nome da "release" dá nome aos recursos. Com "prometheus", o Grafana
@@ -98,6 +99,16 @@ spec:
         grafana:
           # Os dashboards mostram a hora de Lisboa.
           defaultDashboardsTimezone: Europe/Lisbon
+
+          # Utilizador e palavra-passe do administrador: em vez da
+          # palavra-passe por omissão do chart (igual para toda a gente que o
+          # instala), o Grafana lê-as do Secret "grafana-admin", que vem do
+          # SealedSecret em k8s/monitoring/ (Passo 6, Parte E2). O Secret tem
+          # de existir ANTES desta alteração; senão o Pod não arranca.
+          admin:
+            existingSecret: grafana-admin
+            userKey: admin-user # chave do Secret com o nome de utilizador
+            passwordKey: admin-password # chave do Secret com a palavra-passe
           resources:
             requests:
               cpu: 50m

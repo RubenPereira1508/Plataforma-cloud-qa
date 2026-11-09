@@ -43,7 +43,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 03 | Terraform: estado remoto e rede (VPC) | Concluído |
 | 04 | CI/CD com GitHub Actions e scans de segurança | Em curso (pipeline escrita; bloqueada por um problema de faturação da conta GitHub, a aguardar o suporte) |
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
-| 06 | Segredos e observabilidade | Em curso (partes A, B e C concluídas: Sealed Secrets, Prometheus e Grafana, métricas da API) |
+| 06 | Segredos e observabilidade | Concluído (Sealed Secrets, Prometheus e Grafana, métricas da API, nginx corrigido e segredo do Grafana; logs com Loki ficam como melhoria futura) |
 | 07 | Estratégia de testes e testes de API | Por fazer |
 | 08 | Contract testing, E2E, performance e quality gates | Por fazer |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |
@@ -85,3 +85,6 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-08 | Manter o Secret da base de dados fora do Git e criá-lo à mão até ao Passo 6 | Uma palavra-passe num YAML do repositório ficaria exposta (agora público); a gestão de segredos a sério fica para o Passo 6 |
 | 2026-11-08 | Sealed Secrets para guardar segredos no Git, com o controlador instalado pelo ArgoCD | Mantém o GitOps completo (o Git descreve tudo) com o repositório público; a chave privada nunca sai do cluster |
 | 2026-11-08 | Cluster kind de um único nó, com a porta 8081 do computador ligada à 30080 do nó | Poupa memória no portátil; a 8081 não colide com a 8080 do Docker Compose |
+| 2026-11-09 | Palavra-passe do Grafana gerada aleatoriamente e guardada como SealedSecret, aplicado por uma Application própria (`monitoring-segredos`) | A palavra-passe por omissão do chart é pública; o Git passa a descrever também este segredo, encriptado |
+| 2026-11-09 | O nginx do frontend resolve o nome da API a cada pedido (`resolver` e `API_HOST`), com o nome completo no Kubernetes | Evita o `CrashLoopBackOff` quando o DNS ainda não está pronto ao arrancar; o `resolver` do nginx não usa os domínios de pesquisa do cluster |
+| 2026-11-09 | Saltar os logs com Loki (Parte D do Passo 6) | Pesam na memória do Docker Desktop (limite de 7,6 GB) e são opcionais; ficam como melhoria futura |

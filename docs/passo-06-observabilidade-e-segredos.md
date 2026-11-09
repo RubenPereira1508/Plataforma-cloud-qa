@@ -7,8 +7,8 @@
 - A. Segredos no Git com Sealed Secrets ✅
 - B. Prometheus e Grafana: métricas do cluster ✅
 - C. Métricas da própria API ✅
-- D. Logs centralizados com Loki, opcional (por fazer)
-- E. Fecho: correção do nginx ✅; segredo do Grafana e limitações (por fazer)
+- D. Logs centralizados com Loki, opcional (não feita: fica como melhoria futura, ver E3)
+- E. Fecho: correção do nginx, palavra-passe do Grafana num SealedSecret e limitações ✅
 
 ---
 
@@ -280,7 +280,7 @@ Gerou-se tráfego com 300 rondas de 3 pedidos (`/produtos`, `/produtos/1`, `/pro
 
 ![Grafana: pedidos por segundo da API, por código de resposta](imagens/passo-06-grafana-api.png)
 
-### Parte E – Fecho (em curso)
+### Parte E – Fecho ✅
 
 #### E1. Corrigir o nginx para não morrer quando o DNS ainda não está pronto ✅
 
@@ -345,6 +345,46 @@ O `frontend` nunca entrou em `CrashLoopBackOff` e `curl http://localhost:8081/ap
 
 **Observação:** depois do reinício do nó apareceu outra vez um Pod novo do Grafana ao lado do antigo (como na Parte B). Parece acontecer sempre que o cluster arranca; a causa continua por confirmar e é inofensiva.
 
+#### E2. Palavra-passe do Grafana num SealedSecret ✅
+
+**O problema.** O Grafana usava a palavra-passe de administrador que vem por omissão no chart (`prom-operator`), igual para toda a gente que o instala. Só estava protegido por ser acessível apenas por `port-forward`.
+
+**A solução.** Gerar uma palavra-passe aleatória, encriptá-la com o `kubeseal` (como na Parte A) e guardar só a versão encriptada no Git. O Grafana passa a lê-la de um Secret que o controlador cria a partir do SealedSecret.
+
+**Passos:**
+
+1. **Gerar e encriptar**, sem a palavra-passe aparecer no ecrã nem ir para o Git. O `kubectl create secret ... --dry-run=client` monta o Secret só em memória, o `kubeseal` encripta-o e o resultado grava-se em `k8s/monitoring/grafana-admin-sealed.yaml` (com `Set-Content -Encoding ascii`, por causa do UTF-16 do `>` do PowerShell). A palavra-passe em claro vive só numa variável do terminal, que se apaga a seguir (`Remove-Variable`). O gerador usa `RandomNumberGenerator`, que é criptográfico (o `Get-Random` não é).
+2. **Pôr o SealedSecret no cluster.** A Application `prometheus-grafana` instala um Helm chart e só aplica o que o chart traz, por isso o SealedSecret precisa de uma Application própria: `monitoring-segredos` (`k8s/argocd/aplicacao-monitoring-segredos.yaml`), que aplica a pasta `k8s/monitoring/` no namespace `monitoring`. Resultado:
+
+```text
+sealedsecret.bitnami.com/grafana-admin     True     3s
+secret/grafana-admin                       Opaque   2     3s
+```
+
+3. **Configurar o Grafana** (só depois de o Secret existir, senão o Pod não arranca): em `aplicacao-prometheus-grafana.yaml`, `grafana.admin.existingSecret: grafana-admin` com as chaves `admin-user` e `admin-password`. O ArgoCD trocou o Pod do Grafana (o novo ficou `3/3` em 23 s e o antigo saiu). `kubectl get deploy prometheus-grafana -n monitoring -o yaml` mostrou várias referências a `grafana-admin`.
+
+**Prova:** no `http://localhost:3000`, a palavra-passe antiga do chart (`prom-operator`) **falhou** e a nova **entrou**. A palavra-passe lê-se do Secret quando for preciso (copiada para a área de transferência, sem aparecer no ecrã) e nunca se cola no chat nem se escreve no Git.
+
+**Ordem importa:** primeiro o Secret, depois a configuração do Grafana. Se fosse ao contrário, o Pod ficava sem arrancar à espera de um Secret que ainda não existia.
+
+#### E3. Limitações conhecidas
+
+Tudo isto funciona num laboratório local, mas não está pronto para produção. Fica registado para ser honesto sobre o estado e para ser uma lista de melhorias:
+
+| Limitação | Consequência | Como se resolveria |
+|---|---|---|
+| A chave privada do Sealed Secrets não tem cópia de segurança | Se o cluster for apagado, os SealedSecrets no Git deixam de poder ser desencriptados; é preciso gerá-los de novo | Exportar a chave para um cofre seguro (fora do Git); em AWS, usar o Secrets Manager |
+| A palavra-passe do Grafana só vive no Secret do cluster | Perde-se com o cluster | Guardá-la num gestor de palavras-passe, ou gerar outra da mesma forma |
+| Prometheus e Grafana sem armazenamento persistente (`retention: 2d`) | As métricas e os dashboards editados perdem-se se os Pods forem recriados | Volumes persistentes (PVC) |
+| Alertmanager desligado | Não há alertas por email/Slack | Ligá-lo e definir regras de alerta |
+| `node-exporter` e métricas do control plane desligados | Sem métricas da máquina; só dos contentores | Ligar num cluster que o suporte (EKS) |
+| Grafana só por `port-forward`, sem Ingress nem TLS | Acesso só local | Ingress com TLS e autenticação |
+| Logs centralizados (Loki, Parte D) não feitos | Os logs só se veem com `kubectl logs` | Instalar o Loki; foi saltado por pesar na memória do Docker Desktop (limite de 7,6 GB) |
+| Imagens construídas à mão e carregadas com `kind load` | Sem registo nem versionamento automático | Pipeline que constrói e publica no ECR (Passo 4, em pausa) |
+| Base de dados a correr sem as restrições de segurança dos outros Pods | Exceção documentada no Passo 5 | Imagem e permissões adaptadas |
+| O Pod do Grafana é trocado quando o cluster arranca ou o ArgoCD reprocessa o chart | Inofensivo; a causa não foi confirmada | Observar com mais tempo |
+| O `HEALTHCHECK` do frontend passou no Passo 2 com `localhost` e falhou no Passo 6 | Não se sabe porquê | Usa-se `127.0.0.1`, que funciona sempre |
+
 ---
 
 ## 3. Registo do que fizeste
@@ -379,8 +419,13 @@ O `frontend` nunca entrou em `CrashLoopBackOff` e `curl http://localhost:8081/ap
 | E1: nome completo da API no Kubernetes (`API_HOST`) | ✅ | 2026-11-09 | imagem `loja-frontend:0.3` |
 | E1: prova com reinício do nó (`frontend` sem reinício extra) | ✅ | 2026-11-09 | |
 | E1: commit e push | ✅ | 2026-11-09 | |
-| E2: palavra-passe do Grafana num SealedSecret | ☐ | | |
-| E3: limitações, README e glossário | ☐ | | |
+| E2: palavra-passe do Grafana num SealedSecret gerado e commitado | ✅ | 2026-11-09 | |
+| E2: Application `monitoring-segredos` criada, `secret/grafana-admin` existe | ✅ | 2026-11-09 | |
+| E2: Grafana configurado com `existingSecret` | ✅ | 2026-11-09 | |
+| E2: login com a palavra-passe antiga falha, com a nova entra | ✅ | 2026-11-09 | |
+| E2: commit e push | ✅ | 2026-11-09 | |
+| E3: limitações registadas, README e glossário | ✅ | 2026-11-09 | |
+| Commit e push final do Passo 6 | ✅ | 2026-11-09 | feito em conjunto com a E2 (ver instruções) |
 
 ## 4. Para a entrevista
 
@@ -423,3 +468,12 @@ As outras aplicações resolvem nomes pela função do sistema, que usa os domí
 
 **Como provaste que a correção funcionava?**
 No Compose, parando a API (o nginx devolveu 502 e continuou vivo) e voltando a ligá-la sem reiniciar o frontend. No cluster, reiniciando o nó e comparando a coluna RESTARTS: o `frontend` ganhou só o +1 do reinício do nó, igual à API e à base de dados.
+
+**Porque é que a palavra-passe do Grafana não deve ficar a de omissão do chart?**
+Porque é igual para toda a gente que instala o chart e é pública. Gera-se uma aleatória, encripta-se com o `kubeseal` e guarda-se só a versão encriptada no Git; o Grafana lê-a de um Secret.
+
+**Porque foi preciso criar uma Application só para o SealedSecret do Grafana?**
+Porque a Application do Grafana instala um Helm chart e só aplica o que o chart traz. Os ficheiros próprios precisam de uma Application que aponte para uma pasta do repositório.
+
+**Porque é que a ordem importa (Secret primeiro, Grafana depois)?**
+Se o Grafana for configurado para usar um Secret que ainda não existe, o Pod não arranca. Por isso criou-se o Secret, confirmou-se que existia e só depois se mudou a configuração do Grafana.
