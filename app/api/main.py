@@ -28,7 +28,7 @@ import psycopg
 from fastapi import FastAPI, HTTPException, Path
 from psycopg.rows import dict_row
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # -----------------------------------------------------------------------------
 # Ligação à base de dados
@@ -98,7 +98,7 @@ async def ciclo_de_vida(app: FastAPI):
 app = FastAPI(
     title="API da Loja",
     description="API de exemplo usada no projeto Plataforma Cloud + QA.",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=ciclo_de_vida,
 )
 
@@ -123,17 +123,44 @@ Instrumentator(excluded_handlers=["/saude", "/pronto", "/metrics"]).instrument(a
 # Os modelos do Pydantic descrevem a "forma" dos dados e VALIDAM-nos
 # automaticamente. Se alguém enviar um preço negativo, o FastAPI responde
 # com erro 422 sem precisarmos de escrever código para isso.
+# Limites do preço. A coluna da base de dados é NUMERIC(10, 2): 8 dígitos
+# antes da vírgula e 2 depois, por isso o maior valor possível é 99999999.99 e
+# o menor positivo é 0.01. A API valida isto À ENTRADA; antes só exigia
+# "preco > 0", e valores como 1000000000 ou 0.001 passavam a validação e
+# rebentavam na base de dados (erro 500). Ver DEF-01 e DEF-02 no doc do Passo 7.
+PRECO_MINIMO = 0.01
+PRECO_MAXIMO = 99_999_999.99
+
+
 class ProdutoNovo(BaseModel):
-    """Dados que o cliente envia para criar um produto."""
+    """Dados que o cliente envia para criar um produto (regras ESTRITAS)."""
+
+    # str_strip_whitespace: retira os espaços do início e do fim ANTES de
+    # validar. Assim "   " passa a ter 0 caracteres e é recusado por
+    # min_length=1 (DEF-03), e " Rato " é guardado como "Rato".
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     nome: str = Field(min_length=1, max_length=100, description="Nome do produto")
-    preco: float = Field(gt=0, description="Preço em euros (tem de ser maior que 0)")
+    preco: float = Field(
+        ge=PRECO_MINIMO,
+        le=PRECO_MAXIMO,
+        description="Preço em euros (entre 0,01 e 99 999 999,99)",
+    )
 
 
-class Produto(ProdutoNovo):
-    """Produto guardado: os mesmos campos, mais o identificador."""
+class Produto(BaseModel):
+    """Produto guardado, como a API o DEVOLVE (sem regras de validação).
+
+    Porque NÃO herda de ProdutoNovo: o response_model também valida o que a API
+    devolve. Se herdasse as regras estritas, um produto antigo que já está na
+    base de dados e não cumpre as regras novas (por exemplo, um nome só com
+    espaços criado antes da correção) faria GET /produtos falhar com 500.
+    Regra: ser exigente com o que ENTRA, tolerante com o que já está guardado.
+    """
 
     id: int
+    nome: str
+    preco: float
 
 
 # Os identificadores são inteiros de 32 bits na base de dados (SERIAL).

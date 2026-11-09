@@ -231,50 +231,61 @@ def test_endereco_desconhecido_devolve_404(cliente):
 
 
 # -----------------------------------------------------------------------------
-# DEFEITOS CONHECIDOS (xfail estrito)
+# Defeitos corrigidos (Passo 7, Parte E)
 # -----------------------------------------------------------------------------
-# Estes três testes descrevem o comportamento CORRETO e hoje FALHAM, porque a
-# API tem defeitos. Foram suspeitos ao ler o código (a validação do FastAPI só
-# exige "preco > 0", mas a base de dados NUMERIC(10, 2) tem regras extras que
-# a API não verifica à entrada) e CONFIRMADOS a 2026-11-09 com
-# "pytest --runxfail", que mostra o código de resposta real de cada um.
-# Ver a secção "Defeitos encontrados" no doc do Passo 7.
-#
-# "xfail" quer dizer "falha esperada: sabemos que isto falha hoje". Com
-# strict=True:
-#   - se o teste FALHAR (o defeito existe)  -> aparece como "xfailed" (OK,
-#     defeito documentado, a suite continua verde);
-#   - se o teste PASSAR (a API foi corrigida) -> a suite FALHA a avisar que o
-#     marcador xfail já não faz sentido e deve ser removido.
-# Assim os defeitos ficam registados no código e ninguém os esquece.
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEF-01: preço acima de 99999999.99 passa a validação mas a base "
-    "de dados rejeita (overflow) e a API responde 500 em vez de 422",
-)
+# Estes testes descobriram três defeitos (DEF-01, DEF-02 e DEF-03, ver o doc do
+# Passo 7). Estiveram marcados "xfail" estrito enquanto o defeito existia; ao
+# corrigir a API passaram a verde e o marcador foi removido, como previsto.
 def test_preco_acima_do_limite_da_base_de_dados_devolve_422(cliente):
+    """DEF-01: antes devolvia 500 (overflow na base de dados)."""
     resposta = criar(cliente, preco=1_000_000_000)
 
     assert resposta.status_code == 422
+    assert "preco" in campos_com_erro(resposta)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEF-02: 0.001 passa 'preco > 0' mas a base arredonda para 0.00 "
-    "e viola o CHECK (preco > 0); a API responde 500 em vez de 422",
-)
 def test_preco_que_arredonda_para_zero_devolve_422(cliente):
+    """DEF-02: antes devolvia 500 (a base arredondava para 0.00)."""
     resposta = criar(cliente, preco=0.001)
 
     assert resposta.status_code == 422
+    assert "preco" in campos_com_erro(resposta)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEF-03: o nome só com espaços passa min_length=1 e a API responde "
-    "201; na prática é um nome vazio e devia ser recusado com 422",
-)
 def test_nome_so_com_espacos_devolve_422(cliente):
+    """DEF-03: antes devolvia 201 e guardava um nome vazio na prática."""
     resposta = criar(cliente, nome="   ")
 
     assert resposta.status_code == 422
+    assert "nome" in campos_com_erro(resposta)
+
+
+# -----------------------------------------------------------------------------
+# Testes novos que protegem as correções (valores-limite das regras novas)
+# -----------------------------------------------------------------------------
+def test_preco_logo_acima_do_maximo_devolve_422(cliente):
+    """100000000 é o primeiro valor acima do máximo (99999999.99)."""
+    resposta = criar(cliente, preco=100_000_000)
+
+    assert resposta.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "preco",
+    [pytest.param(0.009, id="0.009"), pytest.param(0.005, id="0.005")],
+)
+def test_preco_abaixo_de_um_centimo_devolve_422(cliente, preco):
+    """Valores positivos abaixo de 0.01 são recusados (a base arredondava-os a 0)."""
+    resposta = criar(cliente, preco=preco)
+
+    assert resposta.status_code == 422
+
+
+def test_espacos_nas_pontas_do_nome_sao_removidos(cliente):
+    """"  Rato  " é guardado como "Rato" (os espaços do início e do fim saem)."""
+    unico = nome_unico()
+
+    resposta = criar(cliente, nome=f"  {unico}  ")
+
+    assert resposta.status_code == 201
+    assert resposta.json()["nome"] == unico

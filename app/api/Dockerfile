@@ -5,8 +5,8 @@
 # Cada instrução cria uma "camada". O Docker guarda as camadas em cache, por
 # isso a ORDEM das instruções importa: o que muda menos vai primeiro.
 #
-# Construir:  docker build -t loja-api:0.2 app/api
-# Correr:     docker run -d -p 8000:8000 --name loja-api loja-api:0.2
+# Construir:  docker build -t loja-api:0.3 app/api
+# Correr:     docker run -d -p 8000:8000 --name loja-api loja-api:0.3
 # =============================================================================
 
 # 1) Imagem de partida.

@@ -4,7 +4,7 @@
 # O QUE FAZ: põe a API (FastAPI) no cluster: um Deployment e um Service.
 # PORQUÊ: equivalente ao serviço "api" do docker-compose.yml.
 #
-# A imagem "loja-api:0.2" é construída no teu computador e carregada para
+# A imagem "loja-api:0.3" é construída no teu computador e carregada para
 # dentro do cluster com "kind load" (ver doc do Passo 5, Parte B). Não está
 # em nenhum registo (ECR/Docker Hub); isso vem com a pipeline, no Passo 4.
 # =============================================================================
@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: loja-api:0.2
+          image: loja-api:0.3
 
           # IfNotPresent: usa a imagem que já está no nó e só tenta
           # descarregá-la se não existir. É OBRIGATÓRIO aqui, porque a imagem
