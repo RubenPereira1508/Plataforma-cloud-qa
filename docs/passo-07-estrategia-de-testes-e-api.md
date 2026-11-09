@@ -8,7 +8,7 @@
 - B. Ambiente de testes e teste de fumo ✅
 - C. Testes funcionais: caminho feliz e erros ✅
 - D. Validação e casos limite, com 3 defeitos encontrados ✅
-- E. Fecho (por fazer)
+- E. Correção dos 3 defeitos e prova no cluster ✅
 
 ---
 
@@ -226,17 +226,106 @@ E  assert 500 == 422     (preço 0.001)
 E  assert 201 == 422     (nome "   ")
 ```
 
-| ID | Defeito | Passos | Esperado | Obtido | Gravidade |
-|---|---|---|---|---|---|
-| DEF-01 | Preço acima do limite da base de dados rebenta a API | `POST /produtos` com `preco: 1000000000` | 422 a indicar o limite | **500 Internal Server Error** (a base de dados rejeita por overflow e o erro não é tratado) | Média |
-| DEF-02 | Preço que arredonda para zero rebenta a API | `POST /produtos` com `preco: 0.001` | 422 | **500** (a base arredonda para 0.00 e viola o `CHECK (preco > 0)`) | Média |
-| DEF-03 | Nome só com espaços é aceite | `POST /produtos` com `nome: "   "` | 422 | **201 Created** (tem 3 caracteres, passa `min_length=1`) | Baixa |
+| ID | Defeito | Passos | Esperado | Obtido | Gravidade | Estado |
+|---|---|---|---|---|---|---|
+| DEF-01 | Preço acima do limite da base de dados rebenta a API | `POST /produtos` com `preco: 1000000000` | 422 a indicar o limite | **500 Internal Server Error** (a base de dados rejeita por overflow e o erro não é tratado) | Média | ✅ Corrigido (Parte E) |
+| DEF-02 | Preço que arredonda para zero rebenta a API | `POST /produtos` com `preco: 0.001` | 422 | **500** (a base arredonda para 0.00 e viola o `CHECK (preco > 0)`) | Média | ✅ Corrigido (Parte E) |
+| DEF-03 | Nome só com espaços é aceite | `POST /produtos` com `nome: "   "` | 422 | **201 Created** (tem 3 caracteres, passa `min_length=1`) | Baixa | ✅ Corrigido (Parte E) |
 
 **Porque a gravidade:** um 500 num dado que o cliente pode enviar é um defeito de robustez (mostra um erro interno em vez de uma mensagem útil), e pode ser provocado por qualquer pessoa. Um nome vazio na prática é um problema de qualidade dos dados.
 
-**Correção possível (por fazer):** no modelo `ProdutoNovo`, `preco` com `ge=0.01, le=99999999.99` (resolve DEF-01 e DEF-02, porque 0.001 fica abaixo de 0.01) e `nome` com remoção de espaços antes de validar (resolve DEF-03). Quando se corrigir, os três testes passam a verde, o `xfail` estrito faz a suite falhar a avisar, e remove-se o marcador.
+**Correção (feita na Parte E, ver abaixo):** no modelo `ProdutoNovo`, `preco` com `ge=0.01, le=99999999.99` (resolve DEF-01 e DEF-02, porque 0.001 fica abaixo de 0.01) e `nome` com remoção de espaços antes de validar (resolve DEF-03). Quando se corrigir, os três testes passam a verde, o `xfail` estrito faz a suite falhar a avisar, e remove-se o marcador.
 
 **Efeito secundário a ter em conta:** o teste do nome só com espaços cria mesmo um produto "   " na base de dados, e a API não tem `DELETE`. Para uma base limpa: `docker compose down -v`.
+
+### Parte E – Correção dos defeitos e prova no cluster ✅
+
+**Ideia:** um defeito só está resolvido quando (1) o código é corrigido, (2) o teste que o apanhava passa a verde e (3) isso se confirma **no sítio onde a aplicação realmente corre** (o cluster), não só no computador de quem programou.
+
+#### E1. A correção no código (`app/api/main.py`, versão 0.3.0)
+
+| Defeito | Correção | Porque funciona |
+|---|---|---|
+| DEF-01 (preço enorme dava 500) | `preco` com `le=99_999_999.99` (constante `PRECO_MAXIMO`) | O limite do pedido passa a ser igual ao da coluna da base de dados, por isso nunca chega lá um valor que ela rejeite |
+| DEF-02 (preço 0.001 dava 500) | `preco` com `ge=0.01` (constante `PRECO_MINIMO`) | 0.001 fica abaixo do mínimo e é recusado com 422 antes de chegar à base de dados (que o arredondava para 0.00) |
+| DEF-03 (nome `"   "` dava 201) | `ConfigDict(str_strip_whitespace=True)` no `ProdutoNovo` | Os espaços das pontas são removidos **antes** de validar, logo `"   "` fica vazio e falha o `min_length=1` |
+
+Efeito colateral útil: `"  Café  "` passa a ser guardado como `"Café"` (há um teste para isso).
+
+#### E2. Decisão de desenho: modelo de entrada separado do de saída
+
+Existem agora dois modelos: `ProdutoNovo` (o que o cliente **envia**, com regras estritas) e `Produto` (o que a API **devolve**, sem essas regras, só `id`, `nome`, `preco`).
+
+**Porquê separados:** a primeira ideia era `Produto` herdar de `ProdutoNovo`. Mas a base de dados já tinha produtos antigos com nome `"   "` (criados pelo teste antigo do DEF-03, e a API não tem `DELETE`). Com a herança, o `GET /produtos` tentaria validar esses dados antigos com as regras novas e **daria 500 para toda a gente**. Separando, as regras novas aplicam-se só ao que entra, e os dados antigos continuam legíveis.
+
+**Prova:** os testes passaram (52) mesmo com esses produtos antigos presentes na base de dados do Compose.
+
+Regra geral para guardar: *endurecer regras de entrada não pode partir a leitura de dados que já existem.*
+
+#### E3. Os testes
+
+Os 3 testes que estavam `xfail` passaram a testes normais (sem o marcador). Acrescentaram-se 4 para fixar os limites exatos das correções:
+
+- `test_preco_logo_acima_do_maximo_devolve_422`
+- `test_preco_abaixo_de_um_centimo_devolve_422` (valores `0.009` e `0.005`)
+- `test_espacos_nas_pontas_do_nome_sao_removidos`
+
+Total: **52 testes** (eram 45 a passar + 3 xfailed).
+
+#### E4. Prova 1: Docker Compose
+
+```text
+52 passed
+```
+
+Com `docker compose up --build`, a API 0.3.0 e a base de dados com os dados antigos.
+
+#### E5. Prova 2: cluster Kubernetes (os mesmos testes, sem alterar nenhuma linha)
+
+Passos, por ordem (a ordem importa):
+
+```powershell
+docker compose down                                    # liberta a porta 8000
+docker start plataforma-control-plane                  # liga o nó do cluster
+docker build -t loja-api:0.3 ./app/api                 # constrói a imagem nova
+kind load docker-image loja-api:0.3 --name plataforma  # entrega-a ao nó ANTES do push
+git add app k8s tests
+git commit -m "Passo 7 Parte E: corrige DEF-01, DEF-02 e DEF-03 na API (imagem 0.3)"
+git push                                               # commit bdbdfb3
+kubectl annotate application loja -n argocd argocd.argoproj.io/refresh=hard --overwrite
+kubectl get pods -n loja -w
+```
+
+**Porque se carrega a imagem antes do push:** o cluster usa `imagePullPolicy: IfNotPresent` e a imagem só existe localmente. Se o ArgoCD aplicasse o YAML antes de a imagem estar no nó, o Pod novo ficaria em `ErrImagePull`.
+
+Rolling Update observado (o Pod novo ficou pronto **antes** de o antigo sair):
+
+```text
+api-6756c8dbf4-8kbcg        1/1     Running             (versão 0.2, antiga)
+api-7c689b9f49-kbrgb        0/1     ContainerCreating   0s
+api-7c689b9f49-kbrgb        0/1     Running             2s
+api-7c689b9f49-kbrgb        1/1     Running             18s    <- Pod novo pronto
+api-6756c8dbf4-8kbcg        1/1     Terminating                <- só agora sai o antigo
+```
+
+Testes contra o cluster, através de um túnel (`kubectl port-forward svc/api -n loja 8000:8000`), com o `conftest.py` inalterado:
+
+```text
+collected 52 items
+...
+===================== 52 passed in 3.40s =====================
+```
+
+**O que isto demonstra:** como os testes são de caixa-preta (falam HTTP), o mesmo código de teste valida a API no Compose e no Kubernetes. Não foi preciso mudar nada.
+
+#### E6. Erros e observações da Parte E
+
+| O que aconteceu | Causa | Lição |
+|---|---|---|
+| Ideia inicial de `Produto` herdar de `ProdutoNovo` | Teria dado 500 no `GET /produtos` por causa de dados antigos (`"   "`) | Separar modelo de entrada e de saída |
+| Aviso `LF will be replaced by CRLF` no `git add` | O Windows converte fins de linha | Inofensivo, pode ignorar-se |
+| O `docker build` mostrou quase tudo `CACHED` | Só mudaram `main.py` e comentários; as camadas anteriores (instalação de dependências) não mudaram | É o comportamento esperado e torna os builds rápidos |
+| Os testes não foram corridos no ambiente onde se escreveu o código | Esse ambiente não tem acesso à internet para instalar o `httpx` | Só se validou a sintaxe lá; a prova real foi na máquina local e no cluster |
 
 ## 3. Registo do que fizeste
 
@@ -246,11 +335,16 @@ E  assert 201 == 422     (nome "   ")
 | Python instalado e verificado | ✅ | 2026-11-09 | 3.14.7 |
 | Ambiente virtual e dependências instaladas | ✅ | 2026-11-09 | |
 | 3 testes de fumo a passar | ✅ | 2026-11-09 | |
-| Commit e push da Parte B | ☐ | | |
+| Commit e push da Parte B | ✅ | 2026-11-09 | |
 | C: 11 testes funcionais a passar | ✅ | 2026-11-09 | `14 passed` |
 | D: testes de validação e casos limite | ✅ | 2026-11-09 | `45 passed, 3 xfailed` |
 | D: 3 defeitos confirmados com `--runxfail` | ✅ | 2026-11-09 | DEF-01 (500), DEF-02 (500), DEF-03 (201) |
-| Commit e push das Partes C e D | ☐ | | |
+| Commit e push das Partes C e D | ✅ | 2026-11-09 | commit 0beb6cf |
+| E: DEF-01, DEF-02 e DEF-03 corrigidos no código | ✅ | 2026-11-09 | `main.py` 0.3.0 |
+| E: 52 testes a passar no Compose | ✅ | 2026-11-09 | |
+| E: imagem `loja-api:0.3` no cluster (Rolling Update) | ✅ | 2026-11-09 | commit bdbdfb3 |
+| E: 52 testes a passar contra o cluster | ✅ | 2026-11-09 | `52 passed in 3.40s` |
+| E: commit e push da documentação | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -280,3 +374,15 @@ Marca um teste que se sabe que falha por um defeito conhecido. A suite continua 
 
 **O que é *mass assignment* e como o testaste?**
 Quando a API aceita campos que o cliente não devia controlar (como o `id`). Enviei um `id` no corpo e verifiquei que o produto criado tinha outro, gerado pela base de dados.
+
+**Como corrigiste os defeitos e como sabes que ficaram resolvidos?**
+Limitei o preço a `0.01`–`99999999.99` (o mesmo limite da coluna) e removi os espaços das pontas do nome antes de validar. Sei que ficaram resolvidos porque os testes que antes os apanhavam passam sem `xfail`, e porque corri a mesma suite de 52 testes no Compose e no cluster Kubernetes.
+
+**Porque separaste o modelo de entrada do de saída?**
+Para que endurecer as regras do que entra não parta a leitura do que já existe. Havia produtos antigos com nome só de espaços, e se o modelo de resposta herdasse as regras novas, o `GET /produtos` dava 500 para todos os clientes.
+
+**O que é um teste de regressão e onde aparece aqui?**
+Um teste que fica para garantir que um defeito já corrigido não volta. Os 3 testes dos defeitos e os 4 novos de limites cumprem esse papel em cada execução futura.
+
+**Porque é que o mesmo teste serve para o Compose e para o Kubernetes?**
+Porque é de caixa-preta: só fala HTTP com um endereço, definido por `API_URL`. Não depende de onde nem como a API corre.

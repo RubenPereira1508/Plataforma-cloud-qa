@@ -195,3 +195,6 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Action** | Passo reutilizável feito por outros (ex.: `actions/checkout`). |
 | **Matrix** | Corre o mesmo job várias vezes com valores diferentes, sem copiar código. |
 | **Secret (do GitHub)** | Valor sensível guardado no GitHub que não aparece nos logs. |
+| **Modelo de entrada / de saída** | Entrada: o que o cliente envia, com regras estritas. Saída: o que a API devolve. Separá-los evita que regras novas partam a leitura de dados antigos. |
+| **Defeito (bug)** | Comportamento da aplicação diferente do esperado. Documenta-se com passos, esperado, obtido e gravidade. |
+| **Rolling Update** | O Kubernetes cria o Pod novo e só remove o antigo quando o novo está pronto, sem a aplicação ficar em baixo. |

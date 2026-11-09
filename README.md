@@ -44,7 +44,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 04 | CI/CD com GitHub Actions e scans de segurança | Em curso (pipeline escrita; bloqueada por um problema de faturação da conta GitHub, a aguardar o suporte) |
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
 | 06 | Segredos e observabilidade | Concluído (Sealed Secrets, Prometheus e Grafana, métricas da API, nginx corrigido e segredo do Grafana; logs com Loki ficam como melhoria futura) |
-| 07 | Estratégia de testes e testes de API | Em curso (partes A a D concluídas: 45 testes da API a passar e 3 defeitos encontrados e documentados) |
+| 07 | Estratégia de testes e testes de API | Concluído (52 testes da API a passar no Compose e no cluster; 3 defeitos encontrados, corrigidos e provados) |
 | 08 | Contract testing, E2E, performance e quality gates | Por fazer |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |
 
@@ -88,3 +88,5 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-09 | Palavra-passe do Grafana gerada aleatoriamente e guardada como SealedSecret, aplicado por uma Application própria (`monitoring-segredos`) | A palavra-passe por omissão do chart é pública; o Git passa a descrever também este segredo, encriptado |
 | 2026-11-09 | O nginx do frontend resolve o nome da API a cada pedido (`resolver` e `API_HOST`), com o nome completo no Kubernetes | Evita o `CrashLoopBackOff` quando o DNS ainda não está pronto ao arrancar; o `resolver` do nginx não usa os domínios de pesquisa do cluster |
 | 2026-11-09 | Saltar os logs com Loki (Parte D do Passo 6) | Pesam na memória do Docker Desktop (limite de 7,6 GB) e são opcionais; ficam como melhoria futura |
+| 2026-11-09 | Modelos separados na API: `ProdutoNovo` (entrada, regras estritas) e `Produto` (saída, sem essas regras) | Endurecer a validação não pode partir a leitura de dados antigos que já existem na base de dados |
+| 2026-11-09 | Limitar o preço a 0,01–99 999 999,99 e remover espaços das pontas do nome | Corrige DEF-01, DEF-02 e DEF-03 e alinha a validação com a coluna da base de dados |
