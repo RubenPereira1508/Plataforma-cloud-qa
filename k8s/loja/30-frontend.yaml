@@ -20,7 +20,6 @@ metadata:
 spec:
   replicas: 1
 
-
   selector:
     matchLabels:
       app: frontend
@@ -32,11 +31,18 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: loja-frontend:0.1
+          image: loja-frontend:0.2
           imagePullPolicy: IfNotPresent # ver explicação no 20-api.yaml
           ports:
             # O nginx "sem privilégios" ouve na 8080 (não na 80).
             - containerPort: 8080
+
+          # Faz a imagem usar o servidor DNS do cluster (lido de
+          # /etc/resolv.conf) no nginx.conf. O nginx passa a resolver o nome
+          # "api" a cada pedido, em vez de só ao arrancar (Passo 6, Parte E).
+          env:
+            - name: NGINX_ENTRYPOINT_LOCAL_RESOLVERS
+              value: "1"
 
           # Sondas (ver explicação completa no 20-api.yaml). O nginx tem o
           # endereço /healthz, que responde "ok" sem depender de mais nada.

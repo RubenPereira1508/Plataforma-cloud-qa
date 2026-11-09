@@ -83,8 +83,12 @@ services:
     ports:
       - "8080:8080"
 
-    # O nginx resolve o nome "api" ao arrancar, por isso a API tem de existir
-    # (e estar saudável) antes do frontend.
+    # Faz a imagem descobrir o servidor DNS do contentor (/etc/resolv.conf) e
+    # usá-lo no nginx.conf, para o nome "api" ser resolvido a cada pedido.
+    environment:
+      NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"
+
+    # O depends_on continua útil: evita o frontend arrancar antes da API.
     depends_on:
       api:
         condition: service_healthy
