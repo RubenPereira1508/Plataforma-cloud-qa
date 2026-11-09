@@ -1,0 +1,43 @@
+# =============================================================================
+# aplicacao-monitoring-segredos.yaml  (k8s/argocd)
+# -----------------------------------------------------------------------------
+# O QUE FAZ: manda o ArgoCD aplicar os ficheiros da pasta k8s/monitoring/ no
+#            namespace "monitoring". Hoje tem lá um SealedSecret: a
+#            palavra-passe do administrador do Grafana, encriptada.
+# PORQUÊ:    a Application "prometheus-grafana" instala um Helm chart e só
+#            aplica o que o chart traz; não consegue aplicar ficheiros nossos.
+#            Por isso o SealedSecret precisa de uma Application própria,
+#            tal como a "loja" aplica a pasta k8s/loja/.
+#
+# ORDEM: este SealedSecret tem de existir ANTES de o Grafana ser configurado
+# para o usar (senão o Pod do Grafana não arranca, por faltar o Secret).
+#
+# Aplica-se uma única vez:
+#   kubectl apply -f k8s/argocd/aplicacao-monitoring-segredos.yaml
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-segredos
+  namespace: argocd
+spec:
+  project: default
+
+  # DE ONDE vem: uma pasta deste repositório.
+  source:
+    repoURL: https://github.com/RubenPereira1508/Plataforma-cloud-qa.git
+    targetRevision: main
+    path: k8s/monitoring
+
+  # PARA ONDE vai: o namespace "monitoring" (já criado pela stack do Prometheus).
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  # Mantém o cluster igual ao Git: aplica alterações, apaga o que saiu do Git
+  # (prune) e repõe o que for alterado à mão (selfHeal).
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
