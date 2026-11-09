@@ -44,7 +44,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 04 | CI/CD com GitHub Actions e scans de segurança | Em curso (pipeline escrita; bloqueada por um problema de faturação da conta GitHub, a aguardar o suporte) |
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
 | 06 | Segredos e observabilidade | Concluído (Sealed Secrets, Prometheus e Grafana, métricas da API, nginx corrigido e segredo do Grafana; logs com Loki ficam como melhoria futura) |
-| 07 | Estratégia de testes e testes de API | Por fazer |
+| 07 | Estratégia de testes e testes de API | Em curso (partes A a D concluídas: 45 testes da API a passar e 3 defeitos encontrados e documentados) |
 | 08 | Contract testing, E2E, performance e quality gates | Por fazer |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |
 

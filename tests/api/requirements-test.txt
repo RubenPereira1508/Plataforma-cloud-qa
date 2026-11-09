@@ -1,0 +1,21 @@
+# requirements-test.txt – dependências dos testes da API (Passo 7)
+#
+# O que faz: lista as bibliotecas Python que os testes precisam.
+#
+# Porque é um ficheiro SEPARADO do app/api/requirements.txt:
+#   Os testes não fazem parte da aplicação. Se ficassem no mesmo ficheiro, a
+#   imagem Docker da API levaria o pytest lá dentro sem necessidade (imagem
+#   maior, mais superfície de ataque). Aplicação e testes têm ciclos de vida
+#   diferentes.
+#
+# Porque intervalos de versões (>=, <): o mesmo critério do requirements.txt
+# da API. Mais tarde, com a pipeline, congelam-se as versões exatas.
+
+# Framework de testes: descobre as funções "test_*", corre-as e mostra o
+# resultado. É o padrão do mundo Python.
+pytest>=8.3,<10
+
+# Cliente HTTP: faz os pedidos à API como um utilizador faria (GET, POST...).
+# Escolhido em vez do "requests" por ser o cliente moderno e por ter a mesma
+# interface que o TestClient do FastAPI.
+httpx>=0.27,<1.0

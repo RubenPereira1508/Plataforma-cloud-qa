@@ -160,6 +160,19 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Nome completo (FQDN)** | Nome de um Service no cluster com todas as partes: `<service>.<namespace>.svc.cluster.local`. |
 | **Template (nginx)** | Ficheiro de configuração com variáveis (`${NOME}`) que a imagem preenche ao arrancar. |
 | **Bad Gateway (502)** | Erro de um proxy que está vivo mas não consegue falar com o servidor de destino. |
+| **pytest** | Framework Python que descobre e corre testes (funções `test_*`) e resume o resultado. |
+| **Fixture** | Preparação reutilizável que um teste pede pelo nome (ex.: o cliente HTTP). |
+| **Parametrização** | Correr o mesmo teste com vários valores de entrada, sem repetir código. |
+| **Teste de fumo** | Verificação mínima e rápida de que o sistema está vivo; se falha, não vale a pena correr o resto. |
+| **Teste de regressão** | Voltar a correr testes após uma alteração para ver se algo que funcionava deixou de funcionar. |
+| **Pirâmide de testes** | Muitos testes rápidos na base, poucos lentos e caros no topo. |
+| **Teste de caixa-preta** | Testa o sistema só por fora (as entradas e as respostas), sem olhar para o código. |
+| **Ambiente virtual (venv)** | Cópia isolada do Python onde se instalam as bibliotecas de um projeto sem tocar no resto do sistema. |
+| **xfail (estrito)** | Marca um teste que se sabe que falha por um defeito conhecido; se um dia passar, a suite avisa para o remover. |
+| **Valores-limite** | Testar o último valor válido e o primeiro inválido de cada regra (ex.: 100 e 101 caracteres). |
+| **Mass assignment** | Defeito em que a API aceita campos que o cliente não devia poder definir (como o `id`). |
+| **Injeção de SQL** | Ataque em que texto malicioso é executado como comando da base de dados. Evita-se com parâmetros (`%s`). |
+| **422 / 405 / 500** | Dados inválidos / método não permitido / erro interno do servidor (um 500 por dados do cliente é um defeito). |
 | **Dashboard** | Painel de gráficos que mostra o estado de um sistema. |
 | **kubectl** | Ferramenta de linha de comandos para falar com um cluster Kubernetes. |
 | **Contexto (kubectl)** | O cluster para onde o kubectl envia os comandos neste momento. |
