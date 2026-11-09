@@ -8,7 +8,7 @@
 - B. Prometheus e Grafana: métricas do cluster ✅
 - C. Métricas da própria API ✅
 - D. Logs centralizados com Loki, opcional (por fazer)
-- E. Fecho (por fazer)
+- E. Fecho: correção do nginx ✅; segredo do Grafana e limitações (por fazer)
 
 ---
 
@@ -144,7 +144,7 @@ Na interface do ArgoCD a `loja` voltou a `Healthy`. A árvore mostra o `SealedSe
 
 ![ArgoCD: SealedSecret e Secret db-credenciais na aplicação loja](imagens/passo-06-argocd-sealedsecret.png)
 
-**Nota sobre o arranque do cluster.** Ao religar o Docker, o `frontend` entrou em `CrashLoopBackOff`: o nginx só resolve o nome `api` no arranque, e o DNS do cluster (`coredns`) ainda estava a recuperar (`host not found in upstream "api"`). Resolveu-se apagando o Pod. Fica como melhoria futura configurar o nginx para resolver o nome em tempo de execução (diretiva `resolver`).
+**Nota sobre o arranque do cluster.** Ao religar o Docker, o `frontend` entrou em `CrashLoopBackOff`: o nginx só resolve o nome `api` no arranque, e o DNS do cluster (`coredns`) ainda estava a recuperar (`host not found in upstream "api"`). Resolveu-se apagando o Pod. Isto ficou corrigido na Parte E (ver abaixo).
 
 ### Parte B – Prometheus e Grafana ✅
 
@@ -280,6 +280,71 @@ Gerou-se tráfego com 300 rondas de 3 pedidos (`/produtos`, `/produtos/1`, `/pro
 
 ![Grafana: pedidos por segundo da API, por código de resposta](imagens/passo-06-grafana-api.png)
 
+### Parte E – Fecho (em curso)
+
+#### E1. Corrigir o nginx para não morrer quando o DNS ainda não está pronto ✅
+
+**O problema.** Depois de reiniciar o Docker, o `frontend` entrava em `CrashLoopBackOff` com `host not found in upstream "api"`. O nginx traduzia o nome `api` num IP **uma única vez, ao arrancar**; se o DNS do cluster (`coredns`) ainda não estivesse pronto nesse momento, o nginx terminava.
+
+**A solução em quatro peças** (todas comentadas nos ficheiros):
+
+| Peça | O que faz |
+|---|---|
+| `resolver` no `nginx.conf` | Diz ao nginx a que servidor DNS perguntar quando resolve o nome em tempo de execução (`valid=10s`: guarda a resposta 10 s; `ipv6=off`: só IPv4) |
+| Nome numa variável (`set $api_upstream ...; proxy_pass $api_upstream;`) | Obriga o nginx a resolver o nome **a cada pedido**, em vez de só ao arrancar |
+| `rewrite ^/api/(.*)$ /$1 break;` | Com variável, o nginx deixa de retirar o prefixo `/api` sozinho; o `rewrite` faz esse trabalho |
+| `nginx.conf` como **template** | A imagem preenche `${NGINX_LOCAL_RESOLVERS}` (o DNS do contentor, lido de `/etc/resolv.conf`) e `${API_HOST}` (o nome da API) ao arrancar. As variáveis `NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1` e `API_HOST` definem-se no Compose e no Kubernetes |
+
+**Testes no Docker Compose** (`docker compose up -d --build`):
+
+1. `curl http://localhost:8080/api/produtos` devolveu os produtos: o template foi preenchido e o `rewrite` funciona.
+2. Prova de que o nome é resolvido a cada pedido: `docker compose stop api` fez o nginx responder **502** (continuou vivo); depois de `docker compose start api`, o mesmo pedido voltou a funcionar **sem reiniciar o frontend**. A API tinha um IP novo e o nginx descobriu-o sozinho.
+
+**Três problemas encontrados pelo caminho** (e porque convém testar antes de dar por concluído):
+
+**1. Health check `unhealthy` no Compose.** O `docker inspect` mostrou `wget: can't connect to remote host: Connection refused` em todas as verificações. Dentro do contentor:
+
+```text
+wget http://127.0.0.1:8080/healthz   ->  ok
+wget http://localhost:8080/healthz   ->  Connection refused
+```
+
+O nome `localhost` estava a ser traduzido para um endereço onde o nginx não escuta (o nginx só escuta em IPv4). Correção: o `HEALTHCHECK` do `Dockerfile` passou a usar `127.0.0.1`. Não se sabe porque é que o mesmo teste passou no Passo 2 com `localhost`; pode ser uma diferença na rede do Docker. A correção não depende disso. No Kubernetes não afeta, porque lá a sonda é um pedido HTTP feito pelo Kubernetes ao Pod.
+
+**2. `502 Bad Gateway` no cluster (funcionava no Compose).** O log do nginx dizia `api could not be resolved (2: Server failure)`. Verificação dentro do Pod:
+
+```text
+cat /etc/resolv.conf   ->  search loja.svc.cluster.local svc.cluster.local cluster.local
+                           nameserver 10.96.0.10
+                           options ndots:5
+grep resolver ...      ->  resolver 10.96.0.10 valid=10s ipv6=off;
+nslookup api 10.96.0.10                        ->  connection timed out
+nslookup api.loja.svc.cluster.local 10.96.0.10 ->  Address: 10.96.177.63
+```
+
+Causa: o nginx, quando resolve em tempo de execução, **não usa os domínios de pesquisa** do `resolv.conf`; pergunta literalmente por `api`, e o CoreDNS não o conhece. O nome completo funciona. Correção: o nome da API passou a vir da variável `API_HOST`, com `api` no Compose (o DNS do Docker aceita nomes curtos) e `api.loja.svc.cluster.local` no Kubernetes. O formato é `<service>.<namespace>.svc.cluster.local`.
+
+**3. Imagem antiga reutilizada.** Como o `imagePullPolicy` é `IfNotPresent`, reconstruir a imagem com o mesmo nome (`0.2`) não faria o Kubernetes usá-la. A imagem subiu para `loja-frontend:0.3` em cada correção.
+
+**Prova final: reiniciar o nó** (`docker stop` e `docker start plataforma-control-plane`). Quando o nó reinicia, todos os Pods ganham +1 na coluna RESTARTS. O critério era o `frontend` ganhar apenas esse +1, sem um reinício extra:
+
+| Pod | RESTARTS antes | RESTARTS depois | Diferença |
+|---|---|---|---|
+| `api` | 2 | 3 | +1 |
+| `db` | 2 | 3 | +1 |
+| `frontend` | 0 | 1 | +1 |
+
+```text
+NAME                        READY   STATUS    RESTARTS      AGE
+api-6756c8dbf4-8kbcg        1/1     Running   3 (48s ago)   7h32m
+db-865c779855-xwgzv         1/1     Running   3 (48s ago)   9h
+frontend-55d9c9b968-6qhff   1/1     Running   1 (48s ago)   106s
+```
+
+O `frontend` nunca entrou em `CrashLoopBackOff` e `curl http://localhost:8081/api/produtos` devolveu os produtos. Com a configuração antiga o `frontend` ficava com um reinício a mais.
+
+**Observação:** depois do reinício do nó apareceu outra vez um Pod novo do Grafana ao lado do antigo (como na Parte B). Parece acontecer sempre que o cluster arranca; a causa continua por confirmar e é inofensiva.
+
 ---
 
 ## 3. Registo do que fizeste
@@ -309,6 +374,13 @@ Gerou-se tráfego com 300 rondas de 3 pedidos (`/produtos`, `/produtos/1`, `/pro
 | Gráfico de pedidos por código de resposta no Grafana | ✅ | 2026-11-08 | |
 | Prints `passo-06-prometheus-target-api.png` e `passo-06-grafana-api.png` | ✅ | 2026-11-08 | |
 | Commit e push do doc da Parte C | ✅ | 2026-11-08 | |
+| E1: nginx com `resolver` e template testado no Compose | ✅ | 2026-11-09 | `502` com a API parada e recuperação sem reiniciar o frontend |
+| E1: health check do frontend corrigido (`127.0.0.1`) | ✅ | 2026-11-09 | |
+| E1: nome completo da API no Kubernetes (`API_HOST`) | ✅ | 2026-11-09 | imagem `loja-frontend:0.3` |
+| E1: prova com reinício do nó (`frontend` sem reinício extra) | ✅ | 2026-11-09 | |
+| E1: commit e push | ✅ | 2026-11-09 | |
+| E2: palavra-passe do Grafana num SealedSecret | ☐ | | |
+| E3: limitações, README e glossário | ☐ | | |
 
 ## 4. Para a entrevista
 
@@ -342,3 +414,12 @@ Um contador só aumenta, por isso o valor absoluto diz pouco. O `rate()` convert
 
 **Porque excluíste `/saude` e `/pronto` das métricas?**
 Porque são pedidos do Kubernetes, não de clientes. Se contassem, os gráficos mostravam tráfego constante que não corresponde ao uso real da loja.
+
+**Porque é que o nginx morria quando o DNS não estava pronto?**
+Com o nome da API escrito diretamente no `proxy_pass`, o nginx resolve-o uma vez ao arrancar e termina se falhar. Pondo o nome numa variável e configurando um `resolver`, passa a resolvê-lo a cada pedido e já não depende do DNS estar pronto no arranque.
+
+**Porque falhava o nome curto `api` no Kubernetes com o nginx, se funciona nas outras aplicações?**
+As outras aplicações resolvem nomes pela função do sistema, que usa os domínios de pesquisa do `/etc/resolv.conf` e completa `api` para `api.loja.svc.cluster.local`. O `resolver` do nginx não faz isso e pergunta literalmente por `api`. Usa-se o nome completo.
+
+**Como provaste que a correção funcionava?**
+No Compose, parando a API (o nginx devolveu 502 e continuou vivo) e voltando a ligá-la sem reiniciar o frontend. No cluster, reiniciando o nó e comparando a coluna RESTARTS: o `frontend` ganhou só o +1 do reinício do nó, igual à API e à base de dados.

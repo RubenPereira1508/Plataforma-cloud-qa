@@ -156,6 +156,10 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **ServiceMonitor** | Recurso que diz ao Prometheus que Service deve recolher métricas. |
 | **Contador (counter)** | Tipo de métrica que só aumenta (ex.: total de pedidos). Para ver a velocidade usa-se `rate()`. |
 | **PromQL** | Linguagem de consulta do Prometheus (ex.: `rate(http_requests_total[1m])`). |
+| **Resolver (DNS)** | Servidor a que um programa pergunta o endereço IP de um nome. No nginx, a diretiva `resolver` indica qual usar quando resolve nomes em tempo de execução. |
+| **Nome completo (FQDN)** | Nome de um Service no cluster com todas as partes: `<service>.<namespace>.svc.cluster.local`. |
+| **Template (nginx)** | Ficheiro de configuração com variáveis (`${NOME}`) que a imagem preenche ao arrancar. |
+| **Bad Gateway (502)** | Erro de um proxy que está vivo mas não consegue falar com o servidor de destino. |
 | **Dashboard** | Painel de gráficos que mostra o estado de um sistema. |
 | **kubectl** | Ferramenta de linha de comandos para falar com um cluster Kubernetes. |
 | **Contexto (kubectl)** | O cluster para onde o kubectl envia os comandos neste momento. |
