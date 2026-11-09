@@ -308,6 +308,10 @@ api-7c689b9f49-kbrgb        1/1     Running             18s    <- Pod novo pront
 api-6756c8dbf4-8kbcg        1/1     Terminating                <- só agora sai o antigo
 ```
 
+Estado final no ArgoCD depois do rollout (aplicação `loja` com a API 0.3):
+
+![ArgoCD com a aplicação loja Healthy e Synced após o rollout da API 0.3](imagens/passo-07-argocd-loja-api-0-3.png)
+
 Testes contra o cluster, através de um túnel (`kubectl port-forward svc/api -n loja 8000:8000`), com o `conftest.py` inalterado:
 
 ```text
