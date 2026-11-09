@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 # O que faz: constrói uma imagem nginx que serve a página e faz proxy para a API.
 #
-# Construir isolado (opcional): docker build -t loja-frontend:0.2 app/frontend
+# Construir isolado (opcional): docker build -t loja-frontend:0.3 app/frontend
 # Normalmente é o docker compose que o constrói.
 # =============================================================================
 

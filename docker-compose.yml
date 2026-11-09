@@ -87,6 +87,8 @@ services:
     # usá-lo no nginx.conf, para o nome "api" ser resolvido a cada pedido.
     environment:
       NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"
+      # Nome da API para o nginx.conf. No Compose o nome curto funciona.
+      API_HOST: api
 
     # O depends_on continua útil: evita o frontend arrancar antes da API.
     depends_on:

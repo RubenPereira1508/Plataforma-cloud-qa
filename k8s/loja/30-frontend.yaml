@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: loja-frontend:0.2
+          image: loja-frontend:0.3
           imagePullPolicy: IfNotPresent # ver explicação no 20-api.yaml
           ports:
             # O nginx "sem privilégios" ouve na 8080 (não na 80).
@@ -43,6 +43,12 @@ spec:
           env:
             - name: NGINX_ENTRYPOINT_LOCAL_RESOLVERS
               value: "1"
+            # Nome COMPLETO do Service da API. O nginx, ao resolver em tempo
+            # de execução, não usa os domínios de pesquisa do cluster, por
+            # isso o nome curto "api" falha (confirmado com nslookup).
+            # Formato: <service>.<namespace>.svc.cluster.local
+            - name: API_HOST
+              value: "api.loja.svc.cluster.local"
 
           # Sondas (ver explicação completa no 20-api.yaml). O nginx tem o
           # endereço /healthz, que responde "ok" sem depender de mais nada.
