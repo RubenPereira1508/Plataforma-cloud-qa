@@ -17,9 +17,12 @@ metadata:
   labels:
     app: api
 spec:
-  # Começamos com 1 cópia. Mais tarde, na Parte B, escalamos para ver o
-  # Kubernetes a repartir pedidos.
-  replicas: 1
+  # 2 cópias (réplicas) da API. Começámos com 1, mas o teste de esforço do
+  # Passo 8 (k6) mostrou que um só Pod, com 1 processo e 250m de CPU, ficava
+  # saturado com cerca de 100 utilizadores (p95 de 3,79 s). Com 2 réplicas o
+  # Kubernetes reparte os pedidos pelas duas e, se uma falhar, a outra continua
+  # a atender (isto também interessa para o chaos testing do Passo 9).
+  replicas: 2
 
   selector:
     matchLabels:
