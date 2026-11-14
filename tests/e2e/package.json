@@ -1,0 +1,13 @@
+{
+  "name": "loja-testes-e2e",
+  "private": true,
+  "description": "Testes ponta a ponta (Playwright) da Loja – Projeto B do portfólio",
+  "scripts": {
+    "test": "playwright test",
+    "test:ver": "playwright test --headed",
+    "relatorio": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}

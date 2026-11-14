@@ -1,0 +1,5 @@
+# .gitignore – ficheiros gerados pelo Playwright que NÃO vão para o Git.
+# Porquê: são pesados, mudam a cada execução e podem ser recriados com um comando.
+node_modules/
+test-results/
+playwright-report/

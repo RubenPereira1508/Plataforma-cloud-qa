@@ -198,3 +198,11 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Modelo de entrada / de saída** | Entrada: o que o cliente envia, com regras estritas. Saída: o que a API devolve. Separá-los evita que regras novas partam a leitura de dados antigos. |
 | **Defeito (bug)** | Comportamento da aplicação diferente do esperado. Documenta-se com passos, esperado, obtido e gravidade. |
 | **Rolling Update** | O Kubernetes cria o Pod novo e só remove o antigo quando o novo está pronto, sem a aplicação ficar em baixo. |
+| **Teste E2E (ponta a ponta)** | Teste que usa a aplicação como um utilizador, num browser verdadeiro, passando por todas as peças (nginx, frontend, API, base de dados). |
+| **Playwright** | Ferramenta que controla um browser por código para escrever testes E2E. Espera sozinha que a página responda. |
+| **data-testid** | Atributo posto no HTML só para os testes encontrarem elementos de forma estável, sem depender de textos ou estilos. |
+| **Locator** | No Playwright, a forma de apontar para um elemento da página (por `data-testid`, papel ou texto). |
+| **Headless / headed** | Headless: o browser corre sem janela visível (por defeito). Headed: abre a janela e vês o teste a correr (`--headed`). |
+| **Teste instável (flaky)** | Teste que umas vezes passa e outras falha sem nada ter mudado. Esconde problemas, por isso não se usam repetições automáticas. |
+| **Trace** | Gravação de um teste do Playwright (passos, rede, ecrã) guardada quando falha, para perceber porquê. |
+| **Simular falha (route.abort)** | O Playwright corta um pedido de rede de propósito para ver como a página reage a uma API em baixo. |

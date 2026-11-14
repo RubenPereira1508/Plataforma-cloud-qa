@@ -31,7 +31,9 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 │   └── 02-rede/             # VPC e (Parte D) sub-redes, rotas; state no bucket
 ├── k8s/                 # (Passo 5) kind, manifests da loja (loja/) e ArgoCD (argocd/)
 ├── observabilidade/     # (Passo 6) Prometheus, Grafana, Loki
-└── qa/                  # (Passos 7 a 9) testes de API, E2E, k6, Pact, chaos
+└── tests/               # (Passos 7 a 9) testes do Projeto B
+    ├── api/             # (Passo 7) pytest: 52 testes da API
+    └── e2e/             # (Passo 8) Playwright: testes de browser da loja
 ```
 
 ## Índice dos passos
@@ -45,7 +47,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
 | 06 | Segredos e observabilidade | Concluído (Sealed Secrets, Prometheus e Grafana, métricas da API, nginx corrigido e segredo do Grafana; logs com Loki ficam como melhoria futura) |
 | 07 | Estratégia de testes e testes de API | Concluído (52 testes da API a passar no Compose e no cluster; 3 defeitos encontrados, corrigidos e provados) |
-| 08 | Contract testing, E2E, performance e quality gates | Por fazer |
+| 08 | E2E, performance, segurança, contract testing e quality gates | Em curso (Parte A concluída: 7 testes E2E com Playwright a passar no cluster) |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |
 
 ## Calendário
@@ -90,3 +92,5 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-09 | Saltar os logs com Loki (Parte D do Passo 6) | Pesam na memória do Docker Desktop (limite de 7,6 GB) e são opcionais; ficam como melhoria futura |
 | 2026-11-09 | Modelos separados na API: `ProdutoNovo` (entrada, regras estritas) e `Produto` (saída, sem essas regras) | Endurecer a validação não pode partir a leitura de dados antigos que já existem na base de dados |
 | 2026-11-09 | Limitar o preço a 0,01–99 999 999,99 e remover espaços das pontas do nome | Corrige DEF-01, DEF-02 e DEF-03 e alinha a validação com a coluna da base de dados |
+| 2026-11-14 | Playwright em Node (`@playwright/test`) e só com o Chromium | É a versão mais usada no mercado; evita dependências Python ainda sem suporte para o Python 3.14; um browser chega para provar os fluxos |
+| 2026-11-14 | Poucos testes E2E (7), sobre os caminhos principais | Pela pirâmide de testes, os de browser são lentos e frágeis; os detalhes já estão nos 52 testes da API |

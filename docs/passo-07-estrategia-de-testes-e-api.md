@@ -348,7 +348,7 @@ collected 52 items
 | E: 52 testes a passar no Compose | ✅ | 2026-11-09 | |
 | E: imagem `loja-api:0.3` no cluster (Rolling Update) | ✅ | 2026-11-09 | commit bdbdfb3 |
 | E: 52 testes a passar contra o cluster | ✅ | 2026-11-09 | `52 passed in 3.40s` |
-| E: commit e push da documentação | ☐ | | |
+| E: commit e push da documentação | ✅ | 2026-11-09 | |
 
 ## 4. Para a entrevista
 
