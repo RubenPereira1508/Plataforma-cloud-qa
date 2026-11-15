@@ -33,7 +33,9 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 ├── observabilidade/     # (Passo 6) Prometheus, Grafana, Loki
 └── tests/               # (Passos 7 a 9) testes do Projeto B
     ├── api/             # (Passo 7) pytest: 52 testes da API
-    └── e2e/             # (Passo 8) Playwright: testes de browser da loja
+    ├── e2e/             # (Passo 8) Playwright: testes de browser da loja
+    ├── k6/              # (Passo 8) k6: testes de desempenho (fumo, carga, esforço)
+    └── zap/             # (Passo 8) OWASP ZAP: relatórios dos scans de segurança
 ```
 
 ## Índice dos passos
@@ -47,7 +49,7 @@ Cada passo tem **teoria** (para perceber o porquê), **prática** (para fazer) e
 | 05 | Kubernetes e ArgoCD (GitOps) | Concluído |
 | 06 | Segredos e observabilidade | Concluído (Sealed Secrets, Prometheus e Grafana, métricas da API, nginx corrigido e segredo do Grafana; logs com Loki ficam como melhoria futura) |
 | 07 | Estratégia de testes e testes de API | Concluído (52 testes da API a passar no Compose e no cluster; 3 defeitos encontrados, corrigidos e provados) |
-| 08 | E2E, performance, segurança, contract testing e quality gates | Em curso (Parte A concluída: 7 testes E2E com Playwright a passar no cluster) |
+| 08 | E2E, performance, segurança, contract testing e quality gates | Em curso (partes A, B e C concluídas: testes E2E com Playwright, desempenho com k6 e segurança com ZAP; faltam contratos e quality gates) |
 | 09 | Chaos testing, relatórios e demo final | Por fazer |
 
 ## Calendário
@@ -94,3 +96,8 @@ Estas regras aplicam-se a todos os ficheiros do repositório:
 | 2026-11-09 | Limitar o preço a 0,01–99 999 999,99 e remover espaços das pontas do nome | Corrige DEF-01, DEF-02 e DEF-03 e alinha a validação com a coluna da base de dados |
 | 2026-11-14 | Playwright em Node (`@playwright/test`) e só com o Chromium | É a versão mais usada no mercado; evita dependências Python ainda sem suporte para o Python 3.14; um browser chega para provar os fluxos |
 | 2026-11-14 | Poucos testes E2E (7), sobre os caminhos principais | Pela pirâmide de testes, os de browser são lentos e frágeis; os detalhes já estão nos 52 testes da API |
+| 2026-11-14 | Testes de desempenho só com leituras (GET) | A API não tem DELETE; os POST em massa encheriam a base de dados para sempre |
+| 2026-11-14 | API passa a 2 réplicas | O teste de esforço (k6) mostrou 1 réplica saturada com 100 utilizadores; com 2, mediana -85 % e 0 % de erros; também melhora a disponibilidade |
+| 2026-11-15 | Cabeçalhos de segurança e CSP estrita no nginx; CSS e JavaScript movidos para ficheiros próprios | O ZAP avisou de 10 problemas; uma CSP sem `unsafe-inline` limita o estrago de um XSS; de 10 avisos passou-se a 3 |
+| 2026-11-15 | Scan do ZAP só passivo (baseline) no cluster; scan ativo, se se fizer, no Docker Compose | O spider cria dados e a API não tem DELETE; o Compose apaga-se por completo com `down -v` |
+| 2026-11-15 | Playwright com `channel: 'chromium'` | O Windows não deixava arrancar o headless-shell (`spawn UNKNOWN`); o Chromium completo funciona sem janela |

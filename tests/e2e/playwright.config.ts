@@ -37,5 +37,19 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
 
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+
+        // channel: 'chromium' faz o modo SEM JANELA usar o Chromium completo, em
+        // vez do "headless shell" (um executável mais pequeno que é o que o
+        // Playwright usa por defeito). Neste PC o Windows não deixava arrancar o
+        // headless shell ("spawn UNKNOWN") mas o Chromium completo funciona
+        // (passo 8, Parte C). O comportamento dos testes é o mesmo.
+        channel: 'chromium',
+      },
+    },
+  ],
 });

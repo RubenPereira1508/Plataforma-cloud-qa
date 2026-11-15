@@ -206,3 +206,21 @@ Lista de termos usados no projeto. É atualizada a cada passo.
 | **Teste instável (flaky)** | Teste que umas vezes passa e outras falha sem nada ter mudado. Esconde problemas, por isso não se usam repetições automáticas. |
 | **Trace** | Gravação de um teste do Playwright (passos, rede, ecrã) guardada quando falha, para perceber porquê. |
 | **Simular falha (route.abort)** | O Playwright corta um pedido de rede de propósito para ver como a página reage a uma API em baixo. |
+| **Teste de desempenho** | Mede como a aplicação se comporta com muitos utilizadores em simultâneo: rapidez e limites. |
+| **k6** | Ferramenta (da Grafana Labs) para testes de desempenho, com os testes escritos em JavaScript. |
+| **VU (utilizador virtual)** | Utilizador simulado pelo k6 que repete em ciclo o que lhe mandam fazer. |
+| **Latência** | Tempo entre enviar um pedido e receber a resposta completa. |
+| **Throughput** | Número de pedidos atendidos por segundo (req/s). |
+| **Percentil (p95, p99)** | O p95 é o tempo abaixo do qual ficam 95 % dos pedidos; mostra os casos lentos que a média esconde. |
+| **Threshold (limiar)** | Regra de aprovação num teste (por exemplo, p95 abaixo de 300 ms). Se falhar, o teste falha. |
+| **Teste de carga / esforço** | Carga: uso normal esperado. Esforço (stress): carga a subir além do esperado para encontrar o limite. |
+| **Estrangulamento (bottleneck)** | O recurso que limita a capacidade do sistema (CPU, base de dados, etc.). Resolvido um, aparece o seguinte. |
+| **Réplica** | Cópia de um Pod. Mais réplicas repartem os pedidos e, se uma falhar, as outras continuam. |
+| **SAST / DAST** | SAST: analisa o código e a configuração sem correr a aplicação. DAST: analisa a aplicação a correr, de fora, como um atacante. |
+| **OWASP ZAP** | Ferramenta gratuita de DAST. O baseline é passivo (observa); o scan ativo envia ataques de propósito. |
+| **OWASP Top 10** | Lista das categorias de falhas mais comuns em aplicações web, usada como referência de segurança. |
+| **AJAX spider** | Modo do ZAP que abre a página num browser e corre o JavaScript para descobrir pedidos; também preenche e submete formulários. |
+| **CSP (Content Security Policy)** | Cabeçalho que diz ao browser de onde pode vir o código e os pedidos da página. Sem `unsafe-inline`, bloqueia CSS e JavaScript escritos no HTML. |
+| **Clickjacking** | Ataque que mete a tua página dentro de outra, invisível, para enganar cliques. Evita-se com `X-Frame-Options` e `frame-ancestors`. |
+| **nosniff** | Valor de `X-Content-Type-Options` que impede o browser de "adivinhar" o tipo de um ficheiro. |
+| **Falso positivo** | Aviso de uma ferramenta que afinal não é um problema. Interpreta-se antes de "corrigir". |
