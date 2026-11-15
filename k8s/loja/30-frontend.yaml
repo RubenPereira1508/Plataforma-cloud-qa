@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: loja-frontend:0.3
+          image: loja-frontend:0.4
           imagePullPolicy: IfNotPresent # ver explicação no 20-api.yaml
           ports:
             # O nginx "sem privilégios" ouve na 8080 (não na 80).

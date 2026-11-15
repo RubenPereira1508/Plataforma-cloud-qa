@@ -1,0 +1,4 @@
+# .gitignore – ficheiros do ZAP que NÃO vão para o Git.
+# zap.yaml: plano de execução que o próprio ZAP gera a cada scan (não é nosso).
+# Os relatórios (baseline-*.html e .json) vão para o Git como prova dos resultados.
+zap.yaml

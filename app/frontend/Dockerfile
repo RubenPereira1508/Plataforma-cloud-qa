@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 # O que faz: constrói uma imagem nginx que serve a página e faz proxy para a API.
 #
-# Construir isolado (opcional): docker build -t loja-frontend:0.3 app/frontend
+# Construir isolado (opcional): docker build -t loja-frontend:0.4 app/frontend
 # Normalmente é o docker compose que o constrói.
 # =============================================================================
 
@@ -20,8 +20,10 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine
 #    Kubernetes). Ver explicação no nginx.conf.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# 3) A página estática.
-COPY index.html /usr/share/nginx/html/index.html
+# 3) A página estática e os seus ficheiros de estilos e de script.
+#    (Estão separados do HTML para a Content Security Policy do nginx poder
+#    proibir código "inline"; ver Passo 8, Parte C.)
+COPY index.html estilo.css app.js /usr/share/nginx/html/
 
 # 4) Documenta a porta (a publicação real faz-se no docker-compose).
 EXPOSE 8080
