@@ -1,0 +1,13 @@
+{
+  "name": "loja-testes-contrato",
+  "private": true,
+  "type": "module",
+  "description": "Testes de contrato (Pact) entre o frontend e a API da Loja – Projeto B",
+  "scripts": {
+    "test:consumidor": "node --test consumidor.test.js",
+    "test:fornecedor": "node --test fornecedor.test.js"
+  },
+  "devDependencies": {
+    "@pact-foundation/pact": "^17.1.4"
+  }
+}

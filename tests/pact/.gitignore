@@ -1,0 +1,5 @@
+# .gitignore – ficheiros que NÃO vão para o Git.
+# node_modules e logs: gerados e pesados. A pasta pacts/ NÃO está aqui de propósito:
+# o ficheiro do contrato é o resultado do teste do consumidor e vai para o Git.
+node_modules/
+logs/

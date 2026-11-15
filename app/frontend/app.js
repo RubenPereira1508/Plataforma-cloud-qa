@@ -9,8 +9,14 @@
 //   (escrito no HTML), que é a via típica de ataques XSS. O ZAP avisou da falta
 //   de CSP no Passo 8, Parte C. Ver também estilo.css.
 //
+// Passo 8, Parte D: os pedidos HTTP à API passaram para o api-cliente.js, que este
+// ficheiro importa. É um módulo (<script type="module">), por isso corre depois
+// de a página estar carregada, sem precisar de "defer".
+//
 // Boa prática mantida: os dados vindos da API são inseridos com textContent
 // (e não innerHTML), para evitar XSS.
+
+import { listarProdutos, criarProduto } from "./api-cliente.js";
 
 // Prefixo dos pedidos à API. O nginx reencaminha /api/... para a API.
 // Como o browser só fala com UM endereço (o do nginx), não há problemas de CORS.
@@ -28,9 +34,7 @@ const euros = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR
 async function carregarProdutos() {
   estadoEl.textContent = "A carregar...";
   try {
-    const resposta = await fetch(`${API}/produtos`);
-    if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-    const produtos = await resposta.json();
+    const produtos = await listarProdutos(API);
 
     listaEl.replaceChildren(); // limpa a lista
     for (const p of produtos) {
@@ -56,18 +60,13 @@ formEl.addEventListener("submit", async (evento) => {
   };
 
   try {
-    const resposta = await fetch(`${API}/produtos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dados),
-    });
+    const resultado = await criarProduto(API, dados);
 
-    if (resposta.status === 422) {
-      // A API rejeitou os dados (validação do servidor).
+    if (resultado.estado === "invalido") {
+      // A API rejeitou os dados (validação do servidor, código 422).
       erroEl.textContent = "Dados inválidos: o nome tem de ter 1 a 100 caracteres e o preço tem de ser maior que 0.";
       return;
     }
-    if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
 
     formEl.reset();
     await carregarProdutos(); // atualiza a lista com o produto novo

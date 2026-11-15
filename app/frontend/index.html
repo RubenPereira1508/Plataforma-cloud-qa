@@ -11,7 +11,8 @@
 
   Passo 8, Parte C: o CSS e o JavaScript saíram para estilo.css e app.js, para
   o nginx poder aplicar uma Content Security Policy estrita (sem código "inline").
-  O atributo "defer" faz o script correr só depois de a página estar carregada.
+  O app.js é um módulo (type="module"): corre depois de a página estar carregada e
+  importa o api-cliente.js, onde estão os pedidos à API (Passo 8, Parte D).
 
   Boas práticas que aplicamos:
     - Os atributos data-testid dão aos testes automáticos pontos de agarre
@@ -57,6 +58,6 @@
     </section>
   </main>
 
-  <script src="app.js" defer></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
